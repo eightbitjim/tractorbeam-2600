@@ -38,6 +38,17 @@ class Console:
               text +
               self.reset),
 
+    def setLineBackground(self, y, color, length):
+        self.goto(0, y)
+        self.clearLine();
+        line = ''
+        for i in range(length):
+            line += ' '
+        self.printText( 
+            self.escape + '[4' + color + 'm' +
+            line +
+            self.reset)    
+        
     def printAtWithColour(self, x, y, text, foreGroundColor):
         self.goto(x, y)
         self.printWithColor(text, foreGroundColor)

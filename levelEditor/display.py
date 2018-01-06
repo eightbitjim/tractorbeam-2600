@@ -18,10 +18,12 @@ class Display:
         return self.cursorX, self.cursorY
 
     def draw(self):
+        self.console.setLineBackground(0, Console.RED, self.width)
         self.console.printAtWithColourAndBackground(0, 0, 'Tractor Beam 2600 Landscape Editor', Console.WHITE, Console.RED)
         for y in range(self.height):
             self.printLine(y)
 
+        self.console.setLineBackground(self.height + 2, Console.RED, self.width)
         self.console.printAtWithColourAndBackground(0, self.height + 2, 's: Set, c: Clear, v: Clear line, a: Copy line above, q: Output code and QUIT', Console.WHITE, Console.RED)
 
     def printLine(self, line):
