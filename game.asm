@@ -130,7 +130,7 @@ clear
     dex
     bne clear
     
-    lda #0
+    lda #2
     sta level
         
 startLevel
@@ -1256,31 +1256,42 @@ scenery1Start2
 scenery1NextLine
     dc.b 8, 24, 56, 80, 88, 128, 152, 200, 208, 248, 255
     
-numberOfLevels  equ 2
+; data for level 2
+
+scenery2Start0
+    dc.b %11110000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %01110000
+scenery2Start1
+    dc.b %11111111, %00000000, %00000000, %00000000, %00000000, %00000000, %00000001, %00000001
+scenery2Start2
+    dc.b %11111111, %00000110, %00000000, %11000000, %00000000, %00000111, %00001111, %00001111
+scenery2NextLine
+    dc.b 8, 48, 72, 88, 112, 208, 248, 255
+    
+numberOfLevels  equ 3
 
 sceneryDataIndexLow0
-    dc.b    <scenery0Start0, <scenery1Start0
+    dc.b    <scenery0Start0, <scenery1Start0, <scenery2Start0
 sceneryDataIndexLow1
-    dc.b    <scenery0Start1, <scenery1Start1
+    dc.b    <scenery0Start1, <scenery1Start1, <scenery2Start1
 sceneryDataIndexLow2
-    dc.b    <scenery0Start2, <scenery1Start2
+    dc.b    <scenery0Start2, <scenery1Start2, <scenery2Start2
 sceneryDataIndexLowNextLine
-    dc.b    <scenery0NextLine, <scenery1NextLine
+    dc.b    <scenery0NextLine, <scenery1NextLine, <scenery2NextLine
 
 sceneryDataIndexHigh0
-    dc.b    >scenery0Start0, >scenery1Start0
+    dc.b    >scenery0Start0, >scenery1Start0, >scenery2Start0
 sceneryDataIndexHigh1
-    dc.b    >scenery0Start0, >scenery1Start1
+    dc.b    >scenery0Start0, >scenery1Start1, >scenery2Start1
 sceneryDataIndexHigh2
-    dc.b    >scenery0Start0, >scenery1Start2
+    dc.b    >scenery0Start0, >scenery1Start2, >scenery2Start2
 sceneryDataIndexHighNextLine
-    dc.b    >scenery0NextLine, >scenery1NextLine
+    dc.b    >scenery0NextLine, >scenery1NextLine, >scenery2NextLine
     
 sceneryColourIndexLow
-    dc.b    <sceneryColoursLevel0, <sceneryColoursLevel1
+    dc.b    <sceneryColoursLevel0, <sceneryColoursLevel1, <sceneryColoursLevel0
     
 sceneryColourIndexHigh
-    dc.b    >sceneryColoursLevel0, >sceneryColoursLevel1
+    dc.b    >sceneryColoursLevel0, >sceneryColoursLevel1, >sceneryColoursLevel0
     
     org $fc00
 sceneryColoursLevel0
