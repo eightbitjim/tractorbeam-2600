@@ -269,6 +269,7 @@ startOfFrame    ; Start of vertical blank processing
         
     ; add DX and DY to x and y
     jsr physics
+    jsr physicsNoGravity
     
     ; check for collisions
     jsr collisionCheck
