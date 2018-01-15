@@ -102,7 +102,7 @@ class Landscape:
         code = '%'
 
         if playfieldbyte == 0:
-            for x in range(4, 0, -1):
+            for x in range(3, -1, -1):
                 if self.isSet(x, y):
                     code += '1'
                 else:
@@ -118,7 +118,7 @@ class Landscape:
             code += ', '
 
         if playfieldbyte == 2:
-            for x in range(20, 12, -1):
+            for x in range(19, 11, -1):
                 if self.isSet(x, y):
                     code += '1'
                 else:

@@ -130,7 +130,7 @@ clear
     dex
     bne clear
     
-    lda #2
+    lda #0
     sta level
         
 startLevel
@@ -1241,9 +1241,28 @@ posObject   SUBROUTINE
             sta RESP0,x                  
             rts 
 
-;; table of 32 squares. To get a square of a number x < 32, use lda squares,x
-        
+; data for level 3
+
+scenery3Start0
+    dc.b %00000000, %00000000, %11110000, %00000000, %00000000, %00000000, %11110000, %00000000, %00000000
+scenery3Start1
+    dc.b %00000000, %00000000, %11111111, %00000000, %00000001, %00000000, %11110000, %00000000, %00011111
+scenery3Start2
+    dc.b %11111110, %00000011, %00000000, %00000000, %11111111, %11111000, %11111000, %11111000, %11111111
+scenery3NextLine
+    dc.b 8, 16, 24, 80, 88, 136, 144, 200, 255
+           
+scenery1Start0
+    dc.b %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
+scenery1Start1
+    dc.b %00000000, %00000000, %00000000, %00000000, %00000000, %00000011, %00001111, %00000000, %00000000, %00000000, %00000000, %00000000, %00000001
+scenery1Start2
+    dc.b %00000000, %00000011, %10000011, %11110011, %11111111, %11111111, %00000000, %11111111, %11001001, %11111111, %01001001, %01111111, %11111111
+scenery1NextLine
+    dc.b 112, 120, 128, 136, 144, 152, 160, 192, 208, 216, 232, 248, 255
+     
     org $fb00
+    ;; table of 32 squares. To get a square of a number x < 32, use lda squares,x
 squares
     dc.b    0 , 1 , 4 , 9 , 16 , 25 , 36 , 49 , 64 , 81 , 100 , 121 , 144 , 169 , 196 , 225
     dc.b    0 , 33 , 68 , 105 , 144 , 185 , 228 , 17 , 64 , 113 , 164 , 217 , 16 , 73 , 132 , 193
@@ -1276,16 +1295,6 @@ scenery0Start2
     dc.b %11111111, %11111000, %11100000, %00000000, %11110000, %11111000, %11111100, %11111110, %11111111, %11111111
 scenery0NextLine
     dc.b 8, 16, 24, 128, 136, 144, 168, 240, 248, 255
-
-    ; scenery data level 1. PF0, PF1, PF2, nextScanlineToChange. Remember PF0 and PF2 are reversed. PF0 only top 4 bits are used.
-scenery1Start0
-    dc.b %11110000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %11110000, %00000000, %00000000
-scenery1Start1
-    dc.b %11111111, %00000000, %00000000, %00100000, %00111111, %00100000, %00100000, %00000000, %11100000, %00000000, %00000000
-scenery1Start2
-    dc.b %11111111, %11000001, %11000000, %11000000, %11000001, %11000000, %11000001, %00000001, %00000001, %00000001, %11111111
-scenery1NextLine
-    dc.b 8, 24, 56, 80, 88, 128, 152, 200, 208, 248, 255
     
 ; data for level 2
 
@@ -1297,32 +1306,32 @@ scenery2Start2
     dc.b %11111111, %00000110, %00000000, %11000000, %00000000, %00000111, %00001111, %00001111
 scenery2NextLine
     dc.b 8, 48, 72, 88, 112, 208, 248, 255
-    
-numberOfLevels  equ 3
+        
+numberOfLevels  equ 4
 
 sceneryDataIndexLow0
-    dc.b    <scenery0Start0, <scenery1Start0, <scenery2Start0
+    dc.b    <scenery0Start0, <scenery1Start0, <scenery2Start0, <scenery3Start0
 sceneryDataIndexLow1
-    dc.b    <scenery0Start1, <scenery1Start1, <scenery2Start1
+    dc.b    <scenery0Start1, <scenery1Start1, <scenery2Start1, <scenery3Start1
 sceneryDataIndexLow2
-    dc.b    <scenery0Start2, <scenery1Start2, <scenery2Start2
+    dc.b    <scenery0Start2, <scenery1Start2, <scenery2Start2, <scenery3Start2
 sceneryDataIndexLowNextLine
-    dc.b    <scenery0NextLine, <scenery1NextLine, <scenery2NextLine
+    dc.b    <scenery0NextLine, <scenery1NextLine, <scenery2NextLine, <scenery3NextLine
 
 sceneryDataIndexHigh0
-    dc.b    >scenery0Start0, >scenery1Start0, >scenery2Start0
+    dc.b    >scenery0Start0, >scenery1Start0, >scenery2Start0, >scenery3Start0
 sceneryDataIndexHigh1
-    dc.b    >scenery0Start0, >scenery1Start1, >scenery2Start1
+    dc.b    >scenery0Start0, >scenery1Start1, >scenery2Start1, >scenery3Start1
 sceneryDataIndexHigh2
-    dc.b    >scenery0Start0, >scenery1Start2, >scenery2Start2
+    dc.b    >scenery0Start0, >scenery1Start2, >scenery2Start2, >scenery3Start2
 sceneryDataIndexHighNextLine
-    dc.b    >scenery0NextLine, >scenery1NextLine, >scenery2NextLine
+    dc.b    >scenery0NextLine, >scenery1NextLine, >scenery2NextLine, >scenery3NextLine
     
 sceneryColourIndexLow
-    dc.b    <sceneryColoursLevel0, <sceneryColoursLevel1, <sceneryColoursLevel0
+    dc.b    <sceneryColoursLevel0, <sceneryColoursLevel1, <sceneryColoursLevel0, <sceneryColoursLevel1
     
 sceneryColourIndexHigh
-    dc.b    >sceneryColoursLevel0, >sceneryColoursLevel1, >sceneryColoursLevel0
+    dc.b    >sceneryColoursLevel0, >sceneryColoursLevel1, >sceneryColoursLevel0, >sceneryColoursLevel1
     
     org $fc00
 sceneryColoursLevel0
@@ -1572,7 +1581,7 @@ shipStart
     REPEAT  248
         dc.b   0
     REPEND
-
+    
     org $ff00
     ; sound effect values
 jetFrequency
