@@ -264,8 +264,6 @@ startOfFrame    ; Start of vertical blank processing
     ; get joystick position (includes scanline waits)
     inc frameCounter
     jsr control
-    jsr control
-    jsr control
         
     ; add DX and DY to x and y
     jsr physics
@@ -655,6 +653,14 @@ control subroutine
     beq .notRight
     dex
     stx shipMinorDX
+    cpx #$81
+    beq .notRight
+    dex
+    stx shipMinorDX
+    cpx #$81
+    beq .notRight
+    dex
+    stx shipMinorDX
     jmp .notRight
 .notLeft
     cmp #64 ; right
@@ -665,6 +671,14 @@ control subroutine
     ldy #3 ; jet left
 .notLeftJet
     ldx shipMinorDX
+    cpx #$7f
+    beq .notRight
+    inx
+    stx shipMinorDX
+    cpx #$7f
+    beq .notRight
+    inx
+    stx shipMinorDX
     cpx #$7f
     beq .notRight
     inx
@@ -685,6 +699,14 @@ control subroutine
     beq .notUp
     dex
     stx shipMinorDY
+    cpx #$81
+    beq .notUp
+    dex
+    stx shipMinorDY
+    cpx #$81
+    beq .notUp
+    dex
+    stx shipMinorDY
     jmp .notDown
 .notUp
     cmp #16 ; down
@@ -695,6 +717,14 @@ control subroutine
     ldy #1 ; jet up
 .notUpJet
     ldx shipMinorDY
+    cpx #$7f
+    beq .notDown
+    inx
+    stx shipMinorDY
+    cpx #$7f
+    beq .notDown
+    inx
+    stx shipMinorDY
     cpx #$7f
     beq .notDown
     inx
