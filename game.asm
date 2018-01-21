@@ -81,6 +81,11 @@ backgroundPointer1          = $b0
 level                       = $b1
 beamElasticity              = $b2
 boxMass                     = $b3
+sceneryAnimationLine        = $b4
+sceneryAnimationLength      = $b5
+sceneryAnimationOffset      = $b6
+sceneryAnimationPosition    = $b7
+sceneryAnimationFramesUntilUpdate = $b8
 
 ; storage for playfield data. Allow 16 lines and 4 values for each = 64 bytes. Half our RAM!
 sceneryStart0               = $c0
@@ -270,7 +275,42 @@ startOfFrame    ; Start of vertical blank processing
     
     ; check for collisions
     jsr collisionCheck
-            
+      
+    ; update background animation
+    lda sceneryAnimationLength
+    cmp #0
+    beq .doneAnimation
+    
+    dec sceneryAnimationFramesUntilUpdate
+    bne .doneAnimation
+
+    lda #4
+    sta sceneryAnimationFramesUntilUpdate
+    
+    dec sceneryAnimationPosition
+    bne .updateAnimation
+    
+    ; reached end of animation. Reset.
+    lda sceneryAnimationLength
+    sta sceneryAnimationPosition
+    
+    ; reverse direction
+    lda sceneryAnimationOffset
+    eor #$ff
+    clc
+    adc #1
+    sta sceneryAnimationOffset
+    
+.updateAnimation
+    ldx sceneryAnimationLine
+    lda sceneryNextLine,x
+    clc
+    adc sceneryAnimationOffset
+    sta sceneryNextLine,x
+        
+    ; finished animation
+
+.doneAnimation
     ; work out start and end lines to draw box
     lda boxMajorY
     sta boxDrawStartLine
@@ -287,7 +327,7 @@ startOfFrame    ; Start of vertical blank processing
     sec
     sbc shipMajorY ; ship draw counter
     tax
-     
+          
 waitForVblankEnd
 	lda INTIM	
 	bne waitForVblankEnd	
@@ -446,7 +486,6 @@ playfieldLoopNoSync
 
     inx             ;   (2)
 
-    
     ; draw box?
     cpy boxDrawStartLine
     bne .notDrawBox1TP
@@ -1240,6 +1279,22 @@ copyPlayfieldData subroutine
     lda (backgroundPointer0),y
     sta boxMass
     
+    iny
+    lda (backgroundPointer0),y
+    sta sceneryAnimationLine
+
+    iny
+    lda (backgroundPointer0),y
+    sta sceneryAnimationLength
+    sta sceneryAnimationPosition
+    
+    iny
+    lda (backgroundPointer0),y
+    sta sceneryAnimationOffset
+    
+    lda #4
+    sta sceneryAnimationFramesUntilUpdate
+
     rts
     
 ;; mark this as the last byte, as it is the last byte before we start aligning data and
@@ -1274,7 +1329,7 @@ scenery3Start2
 scenery3NextLine
     dc.b 8, 16, 24, 80, 88, 136, 144, 200, 255
 scenery3Stats ; needs to follow on after NextLine array
-    dc.b 10, 4, 1
+    dc.b 10, 4, 1, 0, 0, 0
     
 scenery1Start0
     dc.b %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
@@ -1285,7 +1340,7 @@ scenery1Start2
 scenery1NextLine
     dc.b 112, 120, 128, 136, 144, 152, 160, 192, 208, 216, 232, 248, 255
 scenery1Stats ; needs to follow on after NextLine array
-    dc.b 15, 5, 0
+    dc.b 15, 5, 0, 0, 0, 0
 
     org $fb00
     ;; table of 32 squares. To get a square of a number x < 32, use lda squares,x
@@ -1312,7 +1367,7 @@ random1
     dc.b    1,1,0,1,0,1,0,0,1,0
     
     ; scenery data level 0. PF0, PF1, PF2, nextScanlineToChange. Remember PF0 and PF2 are reversed. PF0 only top 4 bits are used.
-    ; scenery stats: beam slack length, elasticity, box mass
+    ; scenery stats: beam slack length, elasticity, box mass, senery animation line, length, offset
     
 scenery0Start0
     dc.b %11110000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00010000
@@ -1323,7 +1378,7 @@ scenery0Start2
 scenery0NextLine
     dc.b 8, 16, 24, 128, 136, 144, 168, 240, 248, 255
 scenery0Stats ; needs to follow on after NextLine array
-    dc.b 10, 3, 1
+    dc.b 10, 3, 1, 3, 100, 255
     
 ; data for level 2
 
@@ -1336,7 +1391,7 @@ scenery2Start2
 scenery2NextLine
     dc.b 8, 48, 72, 88, 112, 208, 248, 255
 scenery2Stats ; needs to follow on after NextLine array
-    dc.b 15, 3, 0
+    dc.b 15, 3, 0, 0, 0, 0
     
 numberOfLevels  equ 4
 
