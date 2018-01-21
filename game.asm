@@ -1351,7 +1351,7 @@ scenery1Start2
 scenery1NextLine
     dc.b 112, 120, 128, 136, 144, 152, 160, 192, 208, 216, 232, 248, 255
 scenery1Stats ; needs to follow on after NextLine array
-    dc.b 15, 5, 0, 0, 0, 0, 0
+    dc.b 10, 3, 1, 0, 0, 0, 0
 
     org $fb00
     ;; table of 32 squares. To get a square of a number x < 32, use lda squares,x
