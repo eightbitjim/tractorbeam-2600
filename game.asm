@@ -87,6 +87,7 @@ sceneryAnimationLength      = $b6
 sceneryAnimationOffset      = $b7
 sceneryAnimationPosition    = $b8
 sceneryAnimationFramesUntilUpdate = $b9
+sceneryLaserPosition        = $ba
 
 ; storage for playfield data. Allow 16 lines and 4 values for each = 64 bytes. Half our RAM!
 sceneryStart0               = $c0
@@ -168,7 +169,7 @@ startLevel
     sta COLUP1
                         
     ; playfield reflection
-    lda #1 + 48 ; playfield reflection and ball really wide
+    lda #1 + 4 + 48 ; playfield reflection and ball really wide and sprites behind playfield
     sta CTRLPF
     sta CXCLR   ; clear collision registers
     
@@ -180,7 +181,6 @@ startOfFrame    ; Start of vertical blank processing
     lda #0
     sta tempStash
     sta GRP0    ; clear sprite image data
-    sta GRP1
     
     ; start vertical sync
     lda #2
@@ -220,7 +220,25 @@ startOfFrame    ; Start of vertical blank processing
 .notResetSeed
     sty randomSeed
     
-    ; position the ship in its x and y position
+    ; position the laser gate thingy in its x position
+    ldx #1 ; sprite 1
+    lda sceneryLaserPosition
+    jsr posObject    
+    
+    ; set the image and colour
+    lda frameCounter
+    and #%10000000
+    bne .visible
+    lda #0 ; invisible
+    jmp .drawLaser
+.visible
+    lda frameCounter
+    sta COLUP1
+    lda #%10101010
+.drawLaser
+    sta GRP1
+    
+    ; position the ship in its x position
     ldx #0 ; sprite 0
     lda shipMajorX
     jsr posObject    
@@ -950,26 +968,35 @@ doneBoxGravity
 collisionCheck subroutine
     lda CXP0FB  ; check player 0 hitting playfield
     and #128
-    beq .notCollide
-
-    ; die
+    beq .doneCheck1
     jsr resetPlayer
-    
-.notCollide
+
+.doneCheck1
+    lda CXPPMM  ; check player 0 hitting player 1 (laser)
+    and #128
+    beq .doneCheck2
+    jsr resetPlayer
+
+.doneCheck2    
     lda CXBLPF  ; check ball hitting playfield (bit 7)
     and #128
-    beq .notCollide2
-
+    beq .doneCheck3
     jsr resetBox    
-.notCollide2
+
+.doneCheck3
+    lda CXP1FB  ; check ball hitting player 1 (laser)
+    and #64
+    beq .doneCheck4
+    jsr resetBox    
+
+.doneCheck4
     lda CXP0FB  ; check ball hitting player
     and #64
-    beq .notCollide3
-    
+    beq .doneCheck5  
     jsr resetBox
     jsr resetPlayer
     
-.notCollide3
+.doneCheck5
     ; reset collision registers
     sta CXCLR
     rts
@@ -1303,6 +1330,10 @@ copyPlayfieldData subroutine
     lda (backgroundPointer0),y
     sta sceneryAnimationOffset
     
+    iny
+    lda (backgroundPointer0),y
+    sta sceneryLaserPosition
+    
     lda #4
     sta sceneryAnimationFramesUntilUpdate
 
@@ -1340,7 +1371,7 @@ scenery3Start2
 scenery3NextLine
     dc.b 8, 16, 24, 80, 88, 136, 144, 200, 255
 scenery3Stats ; needs to follow on after NextLine array
-    dc.b 10, 4, 1, 0, 0, 0, 0
+    dc.b 10, 4, 1, 0, 0, 0, 0, 0
     
 scenery1Start0
     dc.b %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
@@ -1351,7 +1382,7 @@ scenery1Start2
 scenery1NextLine
     dc.b 112, 120, 128, 136, 144, 152, 160, 192, 208, 216, 232, 248, 255
 scenery1Stats ; needs to follow on after NextLine array
-    dc.b 10, 3, 1, 0, 0, 0, 0
+    dc.b 10, 3, 1, 0, 0, 0, 0, 0 
 
     org $fb00
     ;; table of 32 squares. To get a square of a number x < 32, use lda squares,x
@@ -1378,7 +1409,7 @@ random1
     dc.b    1,1,0,1,0,1,0,0,1,0
     
     ; scenery data level 0. PF0, PF1, PF2, nextScanlineToChange. Remember PF0 and PF2 are reversed. PF0 only top 4 bits are used.
-    ; scenery stats: beam slack length, elasticity, box mass, senery animation line1, line2, length, offset
+    ; scenery stats: beam slack length, elasticity, box mass, senery animation line1, line2, length, offset, laser x position
     
 scenery0Start0
     dc.b %11110000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00010000
@@ -1389,7 +1420,7 @@ scenery0Start2
 scenery0NextLine
     dc.b 8, 16, 24, 128, 136, 144, 168, 240, 248, 255
 scenery0Stats ; needs to follow on after NextLine array
-    dc.b 10, 3, 1, 1, 2, 100, 1
+    dc.b 10, 3, 1, 1, 2, 100, 1, 84
     
 ; data for level 2
 
@@ -1402,7 +1433,7 @@ scenery2Start2
 scenery2NextLine
     dc.b 8, 48, 72, 88, 112, 208, 248, 255
 scenery2Stats ; needs to follow on after NextLine array
-    dc.b 15, 3, 0, 0, 0, 0, 0
+    dc.b 15, 3, 0, 0, 0, 0, 0, 0
     
 numberOfLevels  equ 4
 
