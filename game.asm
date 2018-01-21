@@ -79,6 +79,8 @@ screenEndY                  = $ae
 backgroundPointer0          = $af
 backgroundPointer1          = $b0
 level                       = $b1
+beamElasticity              = $b2
+boxMass                     = $b3
 
 ; storage for playfield data. Allow 16 lines and 4 values for each = 64 bytes. Half our RAM!
 sceneryStart0               = $c0
@@ -150,9 +152,6 @@ startLevel
     lda #6  ; tone
     sta AUDC1
     
-    lda #10
-    sta slackLength
-
     ; set the joystick for input
     lda #0
     sta SWACNT
@@ -993,8 +992,10 @@ applyForce subroutine
     lda shipMajorX
     sec
     sbc boxMajorX
-    jsr quarterAccumulator
-    jsr quarterAccumulator
+    
+    ; reduce force to make beam springy
+    ldy beamElasticity
+    jsr reduceAccumulator
         
     tax
     sta forceX
@@ -1012,8 +1013,13 @@ applyForce subroutine
     lda #$7f ; max positive value
 .notOverflowDX
     sta boxMinorDX
+
+    ; now apply inverse of force to the ship, reduced by the box mass
+    lda forceX
+    ldy boxMass
+    jsr reduceAccumulator
+    sta forceX
     
-    ; now apply inverse of force to the ship
     lda shipMinorDX
     sec
     sbc forceX
@@ -1030,12 +1036,12 @@ applyForce subroutine
     lda shipMajorY
     sec
     sbc boxMajorY
-    jsr quarterAccumulator
-    jsr quarterAccumulator
     
-    ;jsr halfAccumulator
+    ; reduce force to make beam springy
+    ldy beamElasticity
+    jsr reduceAccumulator
+    
     tax
-    ;jsr halfAccumulator
     sta forceY
     txa
     
@@ -1051,7 +1057,12 @@ applyForce subroutine
 .notOverflowDY   
     sta boxMinorDY
     
-    ; now apply inverse of force to the ship
+    ; reduce force on ship by box mass amount
+    lda forceY
+    ldy boxMass
+    jsr reduceAccumulator
+    sta forceY
+    
     lda shipMinorDY
     sec
     sbc forceY
@@ -1068,7 +1079,11 @@ applyForce subroutine
 .done
     rts
    
-halfAccumulator subroutine
+    ; shift the accumulator right y spaces preserving the sign
+reduceAccumulator subroutine
+    cpy #0
+    beq .done
+    
     clc
     cmp #0
     bpl .positive
@@ -1077,33 +1092,23 @@ halfAccumulator subroutine
     eor #$ff
     adc #1
     clc
+.shiftLoop1
     lsr
+    dey
+    bne .shiftLoop1
+    
+    ; make negative
     eor #$ff
     adc #1
     rts
 .positive
+.shiftLoop2
     lsr
+    dey
+    bne .shiftLoop2
+.done
     rts
-    
-quarterAccumulator subroutine
-    clc
-    cmp #0
-    bpl .positive
-    
-    ; negative number. Make positive, shift, then make negative
-    eor #$ff
-    adc #1
-    clc
-    lsr
-    lsr
-    eor #$ff
-    adc #1
-    rts
-.positive
-    lsr
-    lsr
-    rts
-     
+         
 ;; calculate distance between two points, specifically box and spaceship. Ignore the
 ;; minor values, just use the major 8 bits.
    
@@ -1218,6 +1223,23 @@ copyPlayfieldData subroutine
     cmp #255
     bne .dataLoop
 
+    ; read the statistics from end of sceneryDataNextLine array for this level
+    ; scenery stats: beam slack length, elasticity, boxMass
+    
+    ; read beam length
+    lda (backgroundPointer0),y
+    sta slackLength
+    
+    ; elasticity
+    iny
+    lda (backgroundPointer0),y
+    sta beamElasticity
+    
+    ; box mass
+    iny
+    lda (backgroundPointer0),y
+    sta boxMass
+    
     rts
     
 ;; mark this as the last byte, as it is the last byte before we start aligning data and
@@ -1251,7 +1273,9 @@ scenery3Start2
     dc.b %11111110, %00000011, %00000000, %00000000, %11111111, %11111000, %11111000, %11111000, %11111111
 scenery3NextLine
     dc.b 8, 16, 24, 80, 88, 136, 144, 200, 255
-           
+scenery3Stats ; needs to follow on after NextLine array
+    dc.b 10, 4, 1
+    
 scenery1Start0
     dc.b %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
 scenery1Start1
@@ -1260,7 +1284,9 @@ scenery1Start2
     dc.b %00000000, %00000011, %10000011, %11110011, %11111111, %11111111, %00000000, %11111111, %11001001, %11111111, %01001001, %01111111, %11111111
 scenery1NextLine
     dc.b 112, 120, 128, 136, 144, 152, 160, 192, 208, 216, 232, 248, 255
-     
+scenery1Stats ; needs to follow on after NextLine array
+    dc.b 15, 5, 0
+
     org $fb00
     ;; table of 32 squares. To get a square of a number x < 32, use lda squares,x
 squares
@@ -1286,7 +1312,8 @@ random1
     dc.b    1,1,0,1,0,1,0,0,1,0
     
     ; scenery data level 0. PF0, PF1, PF2, nextScanlineToChange. Remember PF0 and PF2 are reversed. PF0 only top 4 bits are used.
-
+    ; scenery stats: beam slack length, elasticity, box mass
+    
 scenery0Start0
     dc.b %11110000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00010000
 scenery0Start1
@@ -1295,6 +1322,8 @@ scenery0Start2
     dc.b %11111111, %11111000, %11100000, %00000000, %11110000, %11111000, %11111100, %11111110, %11111111, %11111111
 scenery0NextLine
     dc.b 8, 16, 24, 128, 136, 144, 168, 240, 248, 255
+scenery0Stats ; needs to follow on after NextLine array
+    dc.b 10, 3, 1
     
 ; data for level 2
 
@@ -1306,7 +1335,9 @@ scenery2Start2
     dc.b %11111111, %00000110, %00000000, %11000000, %00000000, %00000111, %00001111, %00001111
 scenery2NextLine
     dc.b 8, 48, 72, 88, 112, 208, 248, 255
-        
+scenery2Stats ; needs to follow on after NextLine array
+    dc.b 15, 3, 0
+    
 numberOfLevels  equ 4
 
 sceneryDataIndexLow0
