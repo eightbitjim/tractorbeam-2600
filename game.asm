@@ -139,7 +139,7 @@ clear
     dex
     bne clear
     
-    lda #0
+    lda #3
     sta level
         
 startLevel
@@ -223,6 +223,7 @@ startOfFrame    ; Start of vertical blank processing
     ; position the laser gate thingy in its x position
     ldx #1 ; sprite 1
     lda sceneryLaserPosition
+    beq .drawLaser ; if set to zero, make the laser invisible
     jsr posObject    
     
     ; set the image and colour
@@ -231,10 +232,12 @@ startOfFrame    ; Start of vertical blank processing
     bne .visible
     lda #0 ; invisible
     jmp .drawLaser
+    
 .visible
     lda frameCounter
     sta COLUP1
     lda #%10101010
+    
 .drawLaser
     sta GRP1
     
@@ -253,7 +256,7 @@ startOfFrame    ; Start of vertical blank processing
     ldx #3  ; missile 1
     jsr posObject
     
-    ; position the two tractor beam missiles, if tractor beam is active
+    ; position the tractor beam missile, if tractor beam is active
     lda beamIsOn
     beq .beamNotOn
     
@@ -429,7 +432,7 @@ playfieldLoopNoSync
         
     ; time to change to next playfield data on next scanline?  
     cpy nextScanlineChange
-    bmi playfieldLoop ; no, just move to next scanline
+    bcc playfieldLoop ; no, just move to next scanline
 
     ; yes change the playfield and do one extra scanline to catch up again
     lda (backgroundPointer0),y
@@ -1002,7 +1005,7 @@ collisionCheck subroutine
     rts
     
 resetBox subroutine    
-    lda #144
+    lda #134
     sta boxMajorX
     
     lda #bottomOfScreen - 1
@@ -1018,7 +1021,7 @@ resetBox subroutine
     rts
     
 resetPlayer subroutine
-    lda #20
+    lda #30
     sta shipMajorX
     
     lda #bottomOfScreen - 1
@@ -1363,26 +1366,26 @@ posObject   SUBROUTINE
 ; data for level 3
 
 scenery3Start0
-    dc.b %00000000, %00000000, %11110000, %00000000, %00000000, %00000000, %11110000, %00000000, %00000000
+    dc.b %11110000, 0, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
 scenery3Start1
-    dc.b %00000000, %00000000, %11111111, %00000000, %00000001, %00000000, %11110000, %00000000, %00011111
+    dc.b %11111111, 0, %00000000, %00000000, %00000000, %00000000, %00000010, %00000010
 scenery3Start2
-    dc.b %11111110, %00000011, %00000000, %00000000, %11111111, %11111000, %11111000, %11111000, %11111111
+    dc.b %11111111, 0, %00010100, %00000000, %00010100, %00010101, %00010101, %11110101
 scenery3NextLine
-    dc.b 8, 16, 24, 80, 88, 136, 144, 200, 255
+    dc.b 8, 16, 40, 184, 208, 232, 248, 255
 scenery3Stats ; needs to follow on after NextLine array
-    dc.b 10, 4, 1, 0, 0, 0, 0, 0
+    dc.b 10, 4, 1,    1, 2, 32, 4,    84
     
 scenery1Start0
-    dc.b %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
+    dc.b %11110000, %00000000, %00000000, %00000000, %00000000, %00000000
 scenery1Start1
-    dc.b %00000000, %00000000, %00000000, %00000000, %00000000, %00000011, %00001111, %00000000, %00000000, %00000000, %00000000, %00000000, %00000001
+    dc.b %11111111, %00000001, %00000111, %00000000, %00000111, %00000000
 scenery1Start2
-    dc.b %00000000, %00000011, %10000011, %11110011, %11111111, %11111111, %00000000, %11111111, %11001001, %11111111, %01001001, %01111111, %11111111
+    dc.b %11111111, %00000001, %00000111, %00000000, %11111111, %00000101
 scenery1NextLine
-    dc.b 112, 120, 128, 136, 144, 152, 160, 192, 208, 216, 232, 248, 255
+    dc.b 8, 56, 72, 144, 160, 255
 scenery1Stats ; needs to follow on after NextLine array
-    dc.b 10, 3, 1, 0, 0, 0, 0, 0 
+    dc.b 10, 3, 1, 1, 2, 70, 1, 0 
 
     org $fb00
     ;; table of 32 squares. To get a square of a number x < 32, use lda squares,x
@@ -1425,15 +1428,14 @@ scenery0Stats ; needs to follow on after NextLine array
 ; data for level 2
 
 scenery2Start0
-    dc.b %11110000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %01110000
+    dc.b %11110000, %00110000, %00010000, %00010000, %00110000, %01110000, %11110000, %11110000
 scenery2Start1
-    dc.b %11111111, %00000000, %00000000, %00000000, %00000000, %00000000, %00000001, %00000001
+    dc.b %11111111, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %10000000
 scenery2Start2
-    dc.b %11111111, %00000110, %00000000, %11000000, %00000000, %00000111, %00001111, %00001111
+    dc.b %11111111, %00000000, %00000000, %11111110, %11111100, %11111000, %11110000, %11100000
 scenery2NextLine
-    dc.b 8, 48, 72, 88, 112, 208, 248, 255
-scenery2Stats ; needs to follow on after NextLine array
-    dc.b 15, 3, 0, 0, 0, 0, 0, 0
+    dc.b 8, 24, 80, 104, 128, 160, 208, 255
+    dc.b 15, 3, 0, 0, 0, 0, 0, 84
     
 numberOfLevels  equ 4
 
