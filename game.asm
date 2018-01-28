@@ -139,7 +139,7 @@ clear
     dex
     bne clear
     
-    lda #3
+    lda #0
     sta level
         
 startLevel
@@ -615,7 +615,6 @@ playfieldLoopNoSync
     lda #255-191
     
 .notTooHigh
-   ; and #254        ; only allow even numbers
     sta screenStartY
     clc
     adc #191
@@ -628,8 +627,7 @@ playfieldLoopNoSync
 .findPlayfieldDataLoop
     inx
     cmp sceneryNextLine,x
-    bpl .findPlayfieldDataLoop
-    beq .findPlayfieldDataLoop
+    bcs .findPlayfieldDataLoop
  
     lda sceneryStart0,x
     sta PF0
