@@ -611,7 +611,7 @@ playfieldLoopNoSync
 
 .notTooLow
     cmp #255-191
-    bmi .notTooHigh
+    bcc .notTooHigh
     lda #255-191
     
 .notTooHigh
