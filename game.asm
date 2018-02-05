@@ -799,13 +799,24 @@ control subroutine
     sty jetPosition
     rts
     
+doFriction
+    clc
+    lsr
+    lsr
+    lsr
+    lsr
+    tax
+    lda frictionTable,x
+    clc
+    rts
+    
 allPhysicsDone2
     rts
     
 physicsNoGravity subroutine
     lda isDead
     bne allPhysicsDone2
-    jmp doneGravity
+    jmp doneGravityAndFriction
 
 noPhysics
     rts
@@ -814,14 +825,36 @@ physics
     lda isDead
     bne noPhysics
     
+    ; add friction based on lookup table on top 4 bits
+    lda shipMinorDY
+    jsr doFriction
+    adc shipMinorDY
+    sta shipMinorDY   
+    
+    lda shipMinorDX
+    jsr doFriction
+    adc shipMinorDX
+    sta shipMinorDX
+
+    lda boxMinorDY
+    jsr doFriction
+    adc boxMinorDY
+    sta boxMinorDY  
+
+    lda boxMinorDX
+    jsr doFriction
+    adc boxMinorDX
+    sta boxMinorDX  
+    ; done friction
+    
     ; add gravity
     ldx shipMinorDY
     cpx #$7f
-    beq doneGravity
+    beq doneGravityAndFriction
     inx
     stx shipMinorDY
-    
-doneGravity
+        
+doneGravityAndFriction
     ; add box gravity
     ldx boxMinorDY
     cpx #$7f
@@ -829,7 +862,7 @@ doneGravity
     inx
     stx boxMinorDY
 
-doneBoxGravity
+doneBoxGravity    
     ; add velocity to position
     ; use signed addition of 8 bit value to 16 bit value
     ; first X
@@ -1717,6 +1750,14 @@ jetFrequency
     
 jetVolume
     dc.b    0, 10, 10, 10, 10
+    
+frictionTable
+    ; positive offsets
+    dc.b    0, 0, 0, 0, -1, -2, -4, -8
+    dc.b    8, 4, 2, 1, 0, 0, 0, 0
+    ; negative offsets
+    
+    
 ;;;;;;;;;;;;;;;;;;;;
 
     IFNCONST PRINTED_SPACE_LEFT
