@@ -97,7 +97,7 @@ sceneryNextLine             = $f0
 
 bottomOfScreen  = 248
 topOfScreen     = 8
-leftOfScreen    = 3
+leftOfScreen    = 6
 rightOfScreen   = 159
 
 	seg mySeg
@@ -127,7 +127,6 @@ fineAdjustBegin
 
 fineAdjustTable EQU fineAdjustBegin - %11110001;
 
-    
 reset
     ldx #0
     txs
@@ -868,7 +867,7 @@ doneBoxGravity
     ; first X
     ldx #00  
     lda shipMinorDX
-    bpl .notAddDX
+    bpl .notAddDX ; positive or negative value?
     dex      ; high byte becomes $ff to reflect negative delta
 .notAddDX
     clc
@@ -1378,8 +1377,12 @@ lastByte
     
 endOfFreeSpace
 
-;; Thanks to AtariAge.com for sharing this piece of code.
+;; Thanks to AtariAge.com for sharing this piece of code and associated lookup table.
+;; I have modified it slightly as it was not possible to display a sprite in the left
+;; most 16 pixels (or at least, it was positioned incorrectly).
 posObject   SUBROUTINE
+            cmp #16 ; is it in the left most 16 pixels?
+            bcc .notDelay
             sta WSYNC             
             sec                    
 .divideby15 sbc #15               
@@ -1389,9 +1392,18 @@ posObject   SUBROUTINE
             sta HMP0,x
             sta RESP0,x                  
             rts 
-
+.notDelay
+            ; left-most 16 pixels. Need slightly different timing.
+            sec
+            sbc #18
+            tay
+            sta WSYNC
+            sta RESP0,x   
+            lda fineAdjustTable,y   
+            sta HMP0,x
+            rts 
+            
 ; data for level 3
-
 scenery3Start0
     dc.b %11110000, 0, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
 scenery3Start1
