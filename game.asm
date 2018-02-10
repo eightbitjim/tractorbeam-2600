@@ -97,7 +97,7 @@ sceneryNextLine             = $f0
 
 bottomOfScreen  = 248
 topOfScreen     = 8
-leftOfScreen    = 3
+leftOfScreen    = 6
 rightOfScreen   = 159
 
 	seg mySeg
@@ -127,7 +127,6 @@ fineAdjustBegin
 
 fineAdjustTable EQU fineAdjustBegin - %11110001;
 
-    
 reset
     ldx #0
     txs
@@ -799,13 +798,24 @@ control subroutine
     sty jetPosition
     rts
     
+doFriction
+    clc
+    lsr
+    lsr
+    lsr
+    lsr
+    tax
+    lda frictionTable,x
+    clc
+    rts
+    
 allPhysicsDone2
     rts
     
 physicsNoGravity subroutine
     lda isDead
     bne allPhysicsDone2
-    jmp doneGravity
+    jmp doneGravityAndFriction
 
 noPhysics
     rts
@@ -814,14 +824,36 @@ physics
     lda isDead
     bne noPhysics
     
+    ; add friction based on lookup table on top 4 bits
+    lda shipMinorDY
+    jsr doFriction
+    adc shipMinorDY
+    sta shipMinorDY   
+    
+    lda shipMinorDX
+    jsr doFriction
+    adc shipMinorDX
+    sta shipMinorDX
+
+    lda boxMinorDY
+    jsr doFriction
+    adc boxMinorDY
+    sta boxMinorDY  
+
+    lda boxMinorDX
+    jsr doFriction
+    adc boxMinorDX
+    sta boxMinorDX  
+    ; done friction
+    
     ; add gravity
     ldx shipMinorDY
     cpx #$7f
-    beq doneGravity
+    beq doneGravityAndFriction
     inx
     stx shipMinorDY
-    
-doneGravity
+        
+doneGravityAndFriction
     ; add box gravity
     ldx boxMinorDY
     cpx #$7f
@@ -829,13 +861,13 @@ doneGravity
     inx
     stx boxMinorDY
 
-doneBoxGravity
+doneBoxGravity    
     ; add velocity to position
     ; use signed addition of 8 bit value to 16 bit value
     ; first X
     ldx #00  
     lda shipMinorDX
-    bpl .notAddDX
+    bpl .notAddDX ; positive or negative value?
     dex      ; high byte becomes $ff to reflect negative delta
 .notAddDX
     clc
@@ -1070,10 +1102,7 @@ applyForce subroutine
     ; reduce force to make beam springy
     ldy beamElasticity
     jsr reduceAccumulator
-        
-    tax
     sta forceX
-    txa
     
     clc
     adc boxMinorDX
@@ -1114,10 +1143,7 @@ applyForce subroutine
     ; reduce force to make beam springy
     ldy beamElasticity
     jsr reduceAccumulator
-    
-    tax
     sta forceY
-    txa
     
     clc
     adc boxMinorDY
@@ -1163,6 +1189,7 @@ reduceAccumulator subroutine
     bpl .positive
     
     ; negative number. Make positive, shift, then make negative
+    clc
     eor #$ff
     adc #1
     clc
@@ -1172,6 +1199,7 @@ reduceAccumulator subroutine
     bne .shiftLoop1
     
     ; make negative
+    clc
     eor #$ff
     adc #1
     rts
@@ -1200,7 +1228,7 @@ calculateDistance subroutine
 .sub1done
     lsr ; divide by 2
     cmp #30
-    bpl .returnOutOfRange ; out of range
+    bcs .returnOutOfRange ; out of range
     tax
     lda squares,x
     sta NUML
@@ -1217,7 +1245,7 @@ calculateDistance subroutine
 .sub2done
     lsr ; divide by 2
     cmp #30
-    bpl .returnOutOfRange ; out of range
+    bcs .returnOutOfRange ; out of range
     tax
     lda squares,x
     clc
@@ -1349,8 +1377,12 @@ lastByte
     
 endOfFreeSpace
 
-;; Thanks to AtariAge.com for sharing this piece of code.
+;; Thanks to AtariAge.com for sharing this piece of code and associated lookup table.
+;; I have modified it slightly as it was not possible to display a sprite in the left
+;; most 16 pixels (or at least, it was positioned incorrectly).
 posObject   SUBROUTINE
+            cmp #16 ; is it in the left most 16 pixels?
+            bcc .notDelay
             sta WSYNC             
             sec                    
 .divideby15 sbc #15               
@@ -1360,9 +1392,18 @@ posObject   SUBROUTINE
             sta HMP0,x
             sta RESP0,x                  
             rts 
-
+.notDelay
+            ; left-most 16 pixels. Need slightly different timing.
+            sec
+            sbc #18
+            tay
+            sta WSYNC
+            sta RESP0,x   
+            lda fineAdjustTable,y   
+            sta HMP0,x
+            rts 
+            
 ; data for level 3
-
 scenery3Start0
     dc.b %11110000, 0, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
 scenery3Start1
@@ -1717,6 +1758,14 @@ jetFrequency
     
 jetVolume
     dc.b    0, 10, 10, 10, 10
+    
+frictionTable
+    ; positive offsets
+    dc.b    0, 0, 0, 0, -1, -2, -4, -8
+    dc.b    8, 4, 2, 1, 0, 0, 0, 0
+    ; negative offsets
+    
+    
 ;;;;;;;;;;;;;;;;;;;;
 
     IFNCONST PRINTED_SPACE_LEFT
