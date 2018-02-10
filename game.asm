@@ -1103,10 +1103,7 @@ applyForce subroutine
     ; reduce force to make beam springy
     ldy beamElasticity
     jsr reduceAccumulator
-        
-    tax
     sta forceX
-    txa
     
     clc
     adc boxMinorDX
@@ -1147,10 +1144,7 @@ applyForce subroutine
     ; reduce force to make beam springy
     ldy beamElasticity
     jsr reduceAccumulator
-    
-    tax
     sta forceY
-    txa
     
     clc
     adc boxMinorDY
@@ -1196,6 +1190,7 @@ reduceAccumulator subroutine
     bpl .positive
     
     ; negative number. Make positive, shift, then make negative
+    clc
     eor #$ff
     adc #1
     clc
@@ -1205,6 +1200,7 @@ reduceAccumulator subroutine
     bne .shiftLoop1
     
     ; make negative
+    clc
     eor #$ff
     adc #1
     rts
@@ -1233,7 +1229,7 @@ calculateDistance subroutine
 .sub1done
     lsr ; divide by 2
     cmp #30
-    bpl .returnOutOfRange ; out of range
+    bcs .returnOutOfRange ; out of range
     tax
     lda squares,x
     sta NUML
@@ -1250,7 +1246,7 @@ calculateDistance subroutine
 .sub2done
     lsr ; divide by 2
     cmp #30
-    bpl .returnOutOfRange ; out of range
+    bcs .returnOutOfRange ; out of range
     tax
     lda squares,x
     clc
