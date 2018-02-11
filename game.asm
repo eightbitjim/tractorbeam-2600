@@ -1761,8 +1761,8 @@ jetVolume
     
 frictionTable
     ; positive offsets
-    dc.b    0, 0, 0, -1, -2, -4, -7, -12
-    dc.b    12, 7, 4, 2, 1, 0, 0, 0
+    dc.b    0, 0, -1, -1, -2, -4, -7, -10
+    dc.b    10, 7, 4, 2, 1, 1, 0, 0
     ; negative offsets
     
     
