@@ -361,6 +361,7 @@ waitForVblankEnd
 	bne waitForVblankEnd	
 
     ; vertical blank done
+    lda #0
     sta WSYNC
     sta HMOVE   
 	sta VBLANK 
@@ -1374,14 +1375,20 @@ titleScreen
     ; set the joystick for input
     lda #0
     sta SWACNT
-    
-    lda #255 - 4
-    sta shipMinorX ; set up timer for colour animation
+        
+    ; set up colours
+    lda #56
+    sta shipMajorX
+    lda #64
+    sta shipMinorX
     
     ; playfield reflection
     lda #1 + 4 + 48 ; playfield reflection and ball really wide and sprites behind playfield
     sta CTRLPF
         
+    lda #$ff
+    sta COLUPF
+    
     ldx #0 ; first colour set  
     lda #sceneryColourIndexLow,x
     sta backgroundPointer0
@@ -1421,21 +1428,24 @@ textFrameStart    ; Start of vertical blank processing
     
     lda shipMajorX
     sta COLUPF
-    inc shipMinorX
+    dec shipMinorX
     bne .notIncreaseColour
-    inc shipMajorX
-    lda #255 - 2
+    
+    lda shipMajorX
+    clc
+    adc #28
+    sta shipMajorX
+    lda #64
     sta shipMinorX
     
 .notIncreaseColour
     ; check for user hitting fire
-    lda SWCHA ; joystick input
-    and #192 
-    cmp #128 ; left
-    bne textWaitForVblankEnd
+    lda INPT4
+	bmi textWaitForVblankEnd
     
     ; yes, finished
     rts
+    
 textWaitForVblankEnd
 	lda INTIM	
 	bne textWaitForVblankEnd	
@@ -1450,8 +1460,9 @@ textPlayfieldLoop
     lda (backgroundPointer0),y
     sta COLUBK 
     
-textPlayfieldLoopNoSync
+
     ; left hand of screen
+textPlayfieldLoopNoSync
     lda text0Start0,x
     sta PF0
     lda text0Start1,x
@@ -1517,19 +1528,19 @@ textEndScreen
 ; data for text block 0
 
 text0Start0
-    dc.b %00000000, %11110000, %01000000, %01000000, %01000000, %01000000, %01000000, %01000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
+    dc.b %00000000, %11110000, %11110000, %01000000, %01000000, %01000000, %01000000, %01000000, %00000000, %11110000, %11110000, %10110000, %10110000, %11110000, %10110000, %11110000, %00000000
 text0Start1
-    dc.b %00000000, %10111000, %00100101, %00100101, %00111001, %00100101, %00100101, %00100101, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
+    dc.b %00000000, %10111100, %10111110, %00110110, %00111100, %00110110, %00110110, %00110110, %00000000, %00011111, %00011111, %10011000, %10011000, %00011100, %10011000, %00011111, %00000000
 text0Start2
-    dc.b %00000000, %01100011, %10010100, %00010100, %00010111, %00010100, %10010100, %01100100, %00000000, %01110000, %10010000, %10010000, %01110000, %10010000, %01110000, %00000000
+    dc.b %00000000, %10001110, %11011111, %01011011, %01011111, %01011011, %11011011, %10011011, %00000000, %10011100, %10111110, %10110110, %10110110, %10111110, %10110110, %10110110, %00000000
 text0Start3
-    dc.b %00000000, %01111100, %00010001, %00010001, %00010001, %00010001, %00010001, %00010000, %00000000, %01111001, %01000010, %01000010, %01110011, %01000010, %01111010, %00000000
+    dc.b %00000000, %11011111, %11011111, %00000100, %00000100, %00000100, %11000100, %11000100, %00000000, %11001110, %11111110, %10110110, %10000110, %10000110, %10000110, %10000110, %00000000
 text0Start4
-    dc.b %00000000, %01110011, %10010100, %10010100, %01110100, %10010100, %10010100, %10010011, %00000000, %10110001, %01001010, %00001010, %00001011, %00001010, %00001010, %00000000
+    dc.b %00000000, %10011100, %10111110, %10110110, %10110110, %10110110, %10111110, %10011100, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
 text0Start5
-    dc.b %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %10000000, %01000000, %01000000, %01000000, %01000000, %01000000, %00000000
+    dc.b %00000000, %11100000, %11110000, %10110000, %11100000, %10110000, %10110000, %10110000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
 text0NextLine
-    dc.b 16, 24, 32, 40, 48, 56, 64, 72, 88, 96, 104, 112, 120, 136, 144, 255
+    dc.b 16, 24, 32, 48, 64, 72, 80, 88, 104, 112, 120, 128, 136, 152, 168, 184, 255
         
 ;; mark this as the last byte, as it is the last byte before we start aligning data and
 ;; functions with page boundaries for performance reasons.

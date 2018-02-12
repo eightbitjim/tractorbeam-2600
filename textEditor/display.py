@@ -33,7 +33,10 @@ class Display:
                 self.printCell(x, line, '  ', self.console.BLACK)
             else:
                 if self.landscape.isSet(x, line):
-                    self.printCell(x, line, '  ', self.console.BLUE)
+                    if x == self.width / 4 or x == self.width / 4 - 1:
+                        self.printCell(x, line, '  ', self.console.CYAN)
+                    else:
+                        self.printCell(x, line, '  ', self.console.BLUE)
                 else:
                     self.printCell(x, line, '  ', self.console.BLACK)
 
