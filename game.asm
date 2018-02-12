@@ -140,14 +140,15 @@ clear
     
     lda #0
     sta level
-        
+      
+    lda #191
+    sta screenEndY
+    jsr titleScreen
+      
 startLevel
     ; once only initialisation per level
     jsr copyPlayfieldData
-    
-    lda #191
-    sta screenEndY
-          
+              
     jsr resetBox
     jsr resetPlayer
     
@@ -360,6 +361,7 @@ waitForVblankEnd
 	bne waitForVblankEnd	
 
     ; vertical blank done
+    lda #0
     sta WSYNC
     sta HMOVE   
 	sta VBLANK 
@@ -1368,6 +1370,178 @@ copyPlayfieldData subroutine
 
     rts
     
+;;;; Title screen
+titleScreen
+    ; set the joystick for input
+    lda #0
+    sta SWACNT
+        
+    ; set up colours
+    lda #56
+    sta shipMajorX
+    lda #64
+    sta shipMinorX
+    
+    ; playfield reflection
+    lda #1 + 4 + 48 ; playfield reflection and ball really wide and sprites behind playfield
+    sta CTRLPF
+        
+    lda #$ff
+    sta COLUPF
+    
+    ldx #0 ; first colour set  
+    lda #sceneryColourIndexLow,x
+    sta backgroundPointer0
+    lda #sceneryColourIndexHigh,x
+    sta backgroundPointer1
+        
+textFrameStart    ; Start of vertical blank processing
+    lda #0
+    sta GRP0    ; clear sprite image data
+    sta nextScanlineChange
+    
+    ; start vertical sync
+    lda #2
+    sta VSYNC
+
+    ; 3 scanlines of VSYNCH signal...
+    sta WSYNC
+    sta WSYNC
+    sta WSYNC
+
+    lda  #43    ; start timer to end of vblank	
+	sta  TIM64T
+    lda #0
+    sta VSYNC           
+    
+    ; need total of 37 lines of vertical blank.
+    ldy #0 ; scanline counter
+    
+    lda #0
+    sta PF0
+    sta PF1
+    sta PF2
+    sta COLUBK
+    
+    ; set up playfield pointers
+    ldx #255 ; offset into playfield data
+    
+    lda shipMajorX
+    sta COLUPF
+    dec shipMinorX
+    bne .notIncreaseColour
+    
+    lda shipMajorX
+    clc
+    adc #28
+    sta shipMajorX
+    lda #64
+    sta shipMinorX
+    
+.notIncreaseColour
+    ; check for user hitting fire
+    lda INPT4
+	bmi textWaitForVblankEnd
+    
+    ; yes, finished
+    rts
+    
+textWaitForVblankEnd
+	lda INTIM	
+	bne textWaitForVblankEnd	
+
+    ; vertical blank done
+    sta WSYNC
+    sta HMOVE   
+	sta VBLANK 
+    
+textPlayfieldLoop    
+    sta WSYNC   ; get to the start of the next scanline
+    lda (backgroundPointer0),y
+    sta COLUBK 
+    
+
+    ; left hand of screen
+textPlayfieldLoopNoSync
+    lda text0Start0,x
+    sta PF0
+    lda text0Start1,x
+    sta PF1
+    lda text0Start2,x
+    sta PF2
+
+    ; right hand of screen
+    nop
+    nop
+    nop
+    
+    lda text0Start5,x
+    sta PF0  
+              
+    lda text0Start3,x
+    sta PF2
+
+    lda text0Start4,x
+    sta PF1
+    
+    ; now prepare for next scanline
+    iny
+    cpy screenEndY
+    beq textEndScreen
+        
+    ; time to change to next playfield data on next scanline?  
+    cpy nextScanlineChange
+    bcc textPlayfieldLoop ; no, just move to next scanline
+
+    ; yes change the playfield
+    inx
+    lda text0NextLine,x
+    sta nextScanlineChange
+    nop
+    jmp textPlayfieldLoopNoSync   
+    
+textEndScreen
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; now the bottom part of the screen
+    ; wait for end of the current line before doing anything
+    sta WSYNC
+    
+    lda #2
+    sta VBLANK                     ; end of screen - enter blanking
+
+    ; stop drawing the box, ship and everything else
+    lda #0
+    sta ENABL
+    sta GRP0
+    sta ENAM0
+    sta ENAM1
+    
+    ; 30 scanlines of overscan...
+    lda  #35   ; start timer to end of vblank	
+	sta  TIM64T
+	
+.textWaitForOverscanToComplete
+    lda INTIM	
+	bne .textWaitForOverscanToComplete	
+    jmp textFrameStart
+    
+; data for text block 0
+
+text0Start0
+    dc.b %00000000, %11110000, %11110000, %01000000, %01000000, %01000000, %01000000, %01000000, %00000000, %11110000, %11110000, %10110000, %10110000, %11110000, %10110000, %11110000, %00000000
+text0Start1
+    dc.b %00000000, %10111100, %10111110, %00110110, %00111100, %00110110, %00110110, %00110110, %00000000, %00011111, %00011111, %10011000, %10011000, %00011100, %10011000, %00011111, %00000000
+text0Start2
+    dc.b %00000000, %10001110, %11011111, %01011011, %01011111, %01011011, %11011011, %10011011, %00000000, %10011100, %10111110, %10110110, %10110110, %10111110, %10110110, %10110110, %00000000
+text0Start3
+    dc.b %00000000, %11011111, %11011111, %00000100, %00000100, %00000100, %11000100, %11000100, %00000000, %11001110, %11111110, %10110110, %10000110, %10000110, %10000110, %10000110, %00000000
+text0Start4
+    dc.b %00000000, %10011100, %10111110, %10110110, %10110110, %10110110, %10111110, %10011100, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
+text0Start5
+    dc.b %00000000, %11100000, %11110000, %10110000, %11100000, %10110000, %10110000, %10110000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
+text0NextLine
+    dc.b 16, 24, 32, 48, 64, 72, 80, 88, 104, 112, 120, 128, 136, 152, 168, 184, 255
+        
 ;; mark this as the last byte, as it is the last byte before we start aligning data and
 ;; functions with page boundaries for performance reasons.
 lastByte
