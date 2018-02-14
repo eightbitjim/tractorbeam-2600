@@ -21,17 +21,25 @@ VIDEO_MODE  set NTSC
     
     IF VIDEO_MODE=0
         ECHO "NTSC mode"
+VBLANK_LINES    =   40
+KERNAL_LINES        =   192
+OVERSCAN_LINES      =   30
     ENDIF
     
     IF VIDEO_MODE=1
         ECHO "PAL mode"
+VBLANK_LINES    =   48
+KERNAL_LINES        =   228
+OVERSCAN_LINES      =   36
     ENDIF
     
     IF VIDEO_MODE=2
-        ECHO "SECAM mode"
+        ECHO "SECAM mode not supported"
     ENDIF
     ENDIF
         
+CLOCKS_PER_SCANLINE =   74
+
     ; storage location (1st byte in RAM)
 nextScanlineChange          = $80             
 tempStash                   = $81
@@ -40,6 +48,7 @@ shipMajorX                       = $83
 shipMinorX                  = $84
 shipMajorY                       = $85
 shipMinorY                  = $86
+textOffsetStart             = $86 ; deliberately shared with previous variable
 shipMinorDX                      = $87
 shipMinorDY                      = $88
 isDead                      = $89
@@ -141,9 +150,12 @@ clear
     lda #0
     sta level
       
-    lda #191
+    lda #KERNAL_LINES - 1
     sta screenEndY
-    jsr titleScreen
+    
+    lda #0
+    sta textOffsetStart
+    jsr displayTextScreen
       
 startLevel
     ; once only initialisation per level
@@ -191,12 +203,14 @@ startOfFrame    ; Start of vertical blank processing
     sta WSYNC
     sta WSYNC
 
-    lda  #43    ; start timer to end of vblank	
+   ; lda  #43    ; start timer to end of vblank	
+    lda #((VBLANK_LINES-3)*CLOCKS_PER_SCANLINE)/64
 	sta  TIM64T
     lda #0
     sta VSYNC           
     
-    ; need total of 37 lines of vertical blank.
+    ; need total of 37 lines of vertical blank for NTSC (40 - 3 VYSNC)
+    ; need total of 45 lines of vertical blank for PAC (48 - 3 VYSNC)
     
     ; work out jet position
     ldx jetPosition
@@ -500,7 +514,7 @@ playfieldLoopNoSync
     ; now prepare for next scanline. Don't wait for end of scanline
     iny
     cpy screenEndY
-    beq .endScreen
+    beq .endScreenNoWait
 
     ; third pass, draw next line and assume no playfield changes
     nop ; delay until almost start of horizontal blanking (1 cycle too short...)
@@ -564,7 +578,12 @@ playfieldLoopNoSync
     ; now the bottom part of the screen
     ; wait for end of the current line before doing anything
     sta WSYNC
-    
+.endScreenNoWait
+    ; 30 scanlines of overscan for NTSC..
+;    lda  #35   ; start timer to end of vblank	
+    lda #(OVERSCAN_LINES*CLOCKS_PER_SCANLINE)/64-1
+	sta  TIM64T
+	
     lda #2
     sta VBLANK                     ; end of screen - enter blanking
 
@@ -575,10 +594,6 @@ playfieldLoopNoSync
     sta ENAM0
     sta ENAM1
     
-    ; 30 scanlines of overscan...
-    lda  #35   ; start timer to end of vblank	
-	sta  TIM64T
-
     ; do some work while overscan is in progress
     ; check if ship and box are both in the left hand pool. If so, move to the
     ; next level
@@ -611,14 +626,14 @@ playfieldLoopNoSync
     lda #0
 
 .notTooLow
-    cmp #255-191
+    cmp #255-(KERNAL_LINES-1)
     bcc .notTooHigh
-    lda #255-191
+    lda #255-(KERNAL_LINES-1)
     
 .notTooHigh
     sta screenStartY
     clc
-    adc #191
+    adc #KERNAL_LINES-1
     sta screenEndY
      
     ; work out the top playfield bytes
@@ -1370,8 +1385,8 @@ copyPlayfieldData subroutine
 
     rts
     
-;;;; Title screen
-titleScreen
+;;;; Display a text screen. Load textOffsetStart with offset from startOfText to start with
+displayTextScreen
     ; set the joystick for input
     lda #0
     sta SWACNT
@@ -1409,8 +1424,8 @@ textFrameStart    ; Start of vertical blank processing
     sta WSYNC
     sta WSYNC
 
-    lda  #43    ; start timer to end of vblank	
-	sta  TIM64T
+    lda #43    ; start timer to end of vblank	
+	sta TIM64T
     lda #0
     sta VSYNC           
     
@@ -1424,7 +1439,8 @@ textFrameStart    ; Start of vertical blank processing
     sta COLUBK
     
     ; set up playfield pointers
-    ldx #255 ; offset into playfield data
+    ldx textOffsetStart ; should have been set with offset to start reading text from
+    dex ; decrease by one as it will be increased on the first frame
     
     lda shipMajorX
     sta COLUPF
@@ -1460,14 +1476,13 @@ textPlayfieldLoop
     lda (backgroundPointer0),y
     sta COLUBK 
     
-
     ; left hand of screen
 textPlayfieldLoopNoSync
-    lda text0Start0,x
+    lda startOfText0,x
     sta PF0
-    lda text0Start1,x
+    lda startOfText1,x
     sta PF1
-    lda text0Start2,x
+    lda startOfText2,x
     sta PF2
 
     ; right hand of screen
@@ -1475,13 +1490,13 @@ textPlayfieldLoopNoSync
     nop
     nop
     
-    lda text0Start5,x
+    lda startOfText5,x
     sta PF0  
               
-    lda text0Start3,x
+    lda startOfText3,x
     sta PF2
 
-    lda text0Start4,x
+    lda startOfText4,x
     sta PF1
     
     ; now prepare for next scanline
@@ -1495,7 +1510,7 @@ textPlayfieldLoopNoSync
 
     ; yes change the playfield
     inx
-    lda text0NextLine,x
+    lda startTextNextLine,x
     sta nextScanlineChange
     nop
     jmp textPlayfieldLoopNoSync   
@@ -1524,23 +1539,50 @@ textEndScreen
     lda INTIM	
 	bne .textWaitForOverscanToComplete	
     jmp textFrameStart
-    
+        
+startOfText0
 ; data for text block 0
-
+startOfText0
 text0Start0
     dc.b %00000000, %11110000, %11110000, %01000000, %01000000, %01000000, %01000000, %01000000, %00000000, %11110000, %11110000, %10110000, %10110000, %11110000, %10110000, %11110000, %00000000
+text1Start0
+    dc.b %00000000, %11000000, %00100000, %00100000, %00100000, %00100000, %11000000, %00000000
+
+startOfText1
 text0Start1
     dc.b %00000000, %10111100, %10111110, %00110110, %00111100, %00110110, %00110110, %00110110, %00000000, %00011111, %00011111, %10011000, %10011000, %00011100, %10011000, %00011111, %00000000
+text1Start1
+    dc.b %00000000, %10011000, %00100101, %00100101, %10111101, %10100101, %10100101, %00000000
+
+startOfText2
 text0Start2
     dc.b %00000000, %10001110, %11011111, %01011011, %01011111, %01011011, %11011011, %10011011, %00000000, %10011100, %10111110, %10110110, %10110110, %10111110, %10110110, %10110110, %00000000
+text1Start2
+    dc.b %00000000, %11100101, %00101010, %00101000, %01101000, %00101000, %11101000, %00000000
+
+startOfText3
 text0Start3
     dc.b %00000000, %11011111, %11011111, %00000100, %00000100, %00000100, %11000100, %11000100, %00000000, %11001110, %11111110, %10110110, %10000110, %10000110, %10000110, %10000110, %00000000
+text1Start3
+    dc.b %00000000, %10001100, %00010010, %00010010, %00010010, %00010010, %10001100, %00000000
+
+startOfText4
 text0Start4
     dc.b %00000000, %10011100, %10111110, %10110110, %10110110, %10110110, %10111110, %10011100, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
+text1Start4
+    dc.b %00000000, %11110101, %00010101, %00010101, %00110101, %00010101, %11110010, %00000000
+
+startOfText5
 text0Start5
     dc.b %00000000, %11100000, %11110000, %10110000, %11100000, %10110000, %10110000, %10110000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
+text1Start5
+    dc.b %00000000, %01100000, %01010000, %01010000, %01100000, %01010000, %01010000, %00000000
+
+startTextNextLine
 text0NextLine
     dc.b 16, 24, 32, 48, 64, 72, 80, 88, 104, 112, 120, 128, 136, 152, 168, 184, 255
+text1NextLine
+    dc.b 8, 16, 24, 32, 40, 48, 56, 255
         
 ;; mark this as the last byte, as it is the last byte before we start aligning data and
 ;; functions with page boundaries for performance reasons.
