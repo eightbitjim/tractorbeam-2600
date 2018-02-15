@@ -21,16 +21,16 @@ VIDEO_MODE  set NTSC
     
     IF VIDEO_MODE=0
         ECHO "NTSC mode"
-VBLANK_LINES    =   40
+VBLANK_LINES        =   40
 KERNAL_LINES        =   192
 OVERSCAN_LINES      =   30
     ENDIF
     
     IF VIDEO_MODE=1
         ECHO "PAL mode"
-VBLANK_LINES    =   48
+VBLANK_LINES        =   48
 KERNAL_LINES        =   228
-OVERSCAN_LINES      =   36
+OVERSCAN_LINES      =   29
     ENDIF
     
     IF VIDEO_MODE=2
@@ -38,7 +38,7 @@ OVERSCAN_LINES      =   36
     ENDIF
     ENDIF
         
-CLOCKS_PER_SCANLINE =   74
+CLOCKS_PER_SCANLINE =   76
 
     ; storage location (1st byte in RAM)
 nextScanlineChange          = $80             
@@ -153,7 +153,7 @@ clear
     lda #KERNAL_LINES - 1
     sta screenEndY
     
-    lda #0
+    lda #text0Start0-startOfText0
     sta textOffsetStart
     jsr displayTextScreen
       
@@ -204,7 +204,7 @@ startOfFrame    ; Start of vertical blank processing
     sta WSYNC
 
    ; lda  #43    ; start timer to end of vblank	
-    lda #((VBLANK_LINES-3)*CLOCKS_PER_SCANLINE)/64
+    lda #((VBLANK_LINES-4)*CLOCKS_PER_SCANLINE)/64
 	sta  TIM64T
     lda #0
     sta VSYNC           
@@ -581,7 +581,7 @@ playfieldLoopNoSync
 .endScreenNoWait
     ; 30 scanlines of overscan for NTSC..
 ;    lda  #35   ; start timer to end of vblank	
-    lda #(OVERSCAN_LINES*CLOCKS_PER_SCANLINE)/64-1
+    lda #((OVERSCAN_LINES-1)*CLOCKS_PER_SCANLINE)/64
 	sta  TIM64T
 	
     lda #2
@@ -1424,7 +1424,8 @@ textFrameStart    ; Start of vertical blank processing
     sta WSYNC
     sta WSYNC
 
-    lda #43    ; start timer to end of vblank	
+;    lda #43    ; start timer to end of vblank
+    lda #((VBLANK_LINES-4)*CLOCKS_PER_SCANLINE)/64
 	sta TIM64T
     lda #0
     sta VSYNC           
@@ -1531,8 +1532,8 @@ textEndScreen
     sta ENAM0
     sta ENAM1
     
-    ; 30 scanlines of overscan...
-    lda  #35   ; start timer to end of vblank	
+    ; 30 scanlines of overscan for NTSC...
+    lda #((OVERSCAN_LINES-1)*CLOCKS_PER_SCANLINE)/64	
 	sta  TIM64T
 	
 .textWaitForOverscanToComplete
