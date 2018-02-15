@@ -21,16 +21,18 @@ VIDEO_MODE  set NTSC
     
     IF VIDEO_MODE=0
         ECHO "NTSC mode"
-VBLANK_LINES        =   40
+VSYNC_LINES         =   3
+VBLANK_LINES        =   37
 KERNAL_LINES        =   192
 OVERSCAN_LINES      =   30
     ENDIF
     
     IF VIDEO_MODE=1
         ECHO "PAL mode"
-VBLANK_LINES        =   48
-KERNAL_LINES        =   228
-OVERSCAN_LINES      =   29
+VSYNC_LINES         =   3
+VBLANK_LINES        =   37
+KERNAL_LINES        =   242
+OVERSCAN_LINES      =   30
     ENDIF
     
     IF VIDEO_MODE=2
@@ -150,7 +152,7 @@ clear
     lda #0
     sta level
       
-    lda #KERNAL_LINES - 1
+    lda #KERNAL_LINES-1
     sta screenEndY
     
     lda #text0Start0-startOfText0
@@ -203,14 +205,10 @@ startOfFrame    ; Start of vertical blank processing
     sta WSYNC
     sta WSYNC
 
-   ; lda  #43    ; start timer to end of vblank	
-    lda #((VBLANK_LINES-4)*CLOCKS_PER_SCANLINE)/64
+    lda #(VBLANK_LINES*CLOCKS_PER_SCANLINE)/64
 	sta  TIM64T
     lda #0
     sta VSYNC           
-    
-    ; need total of 37 lines of vertical blank for NTSC (40 - 3 VYSNC)
-    ; need total of 45 lines of vertical blank for PAC (48 - 3 VYSNC)
     
     ; work out jet position
     ldx jetPosition
@@ -580,8 +578,7 @@ playfieldLoopNoSync
     sta WSYNC
 .endScreenNoWait
     ; 30 scanlines of overscan for NTSC..
-;    lda  #35   ; start timer to end of vblank	
-    lda #((OVERSCAN_LINES-1)*CLOCKS_PER_SCANLINE)/64
+    lda #(OVERSCAN_LINES*CLOCKS_PER_SCANLINE)/64
 	sta  TIM64T
 	
     lda #2
@@ -1424,8 +1421,7 @@ textFrameStart    ; Start of vertical blank processing
     sta WSYNC
     sta WSYNC
 
-;    lda #43    ; start timer to end of vblank
-    lda #((VBLANK_LINES-4)*CLOCKS_PER_SCANLINE)/64
+    lda #(VBLANK_LINES*CLOCKS_PER_SCANLINE)/64
 	sta TIM64T
     lda #0
     sta VSYNC           
@@ -1533,7 +1529,7 @@ textEndScreen
     sta ENAM1
     
     ; 30 scanlines of overscan for NTSC...
-    lda #((OVERSCAN_LINES-1)*CLOCKS_PER_SCANLINE)/64	
+    lda #(OVERSCAN_LINES*CLOCKS_PER_SCANLINE)/64	
 	sta  TIM64T
 	
 .textWaitForOverscanToComplete
