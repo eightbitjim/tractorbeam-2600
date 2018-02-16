@@ -1509,6 +1509,7 @@ textWaitForVblankEnd subroutine
     
     ; first the top padding area    
     ldy #PADDING_HEIGHT
+    
 .topPaddingLoop
     sta WSYNC
     dey
@@ -1532,7 +1533,7 @@ textPlayfieldLoopNoSync
     nop
     nop
     nop
-       
+    
     lda startOfText5,x
     sta PF0  
               
@@ -1544,7 +1545,7 @@ textPlayfieldLoopNoSync
     
     ; now prepare for next scanline
     iny
-    cpy #PLAY_AREA_HEIGHT-1
+    cpy #PLAY_AREA_HEIGHT-2
     beq textEndScreen
         
     ; time to change to next playfield data on next scanline?  
@@ -1555,6 +1556,7 @@ textPlayfieldLoopNoSync
     inx
     lda startTextNextLine,x
     sta nextScanlineChange
+    nop
     nop
     jmp textPlayfieldLoopNoSync   
     
