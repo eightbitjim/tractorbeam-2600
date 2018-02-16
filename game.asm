@@ -25,7 +25,7 @@ VSYNC_LINES         =   3
 VBLANK_LINES        =   37
 KERNAL_LINES        =   192
 OVERSCAN_LINES      =   30
-PLAY_AREA_HEIGHT    =   190
+PLAY_AREA_HEIGHT    =   184
     ENDIF
     
     IF VIDEO_MODE=1
@@ -386,12 +386,18 @@ waitForVblankEnd
     lda #0
     sta COLUBK
     
-    ldy #PADDING_HEIGHT
+    ldy #PADDING_HEIGHT-1
 .topPaddingLoop
     sta WSYNC
     dey
     bne .topPaddingLoop
 
+    lda #255
+    sta COLUBK
+    sta WSYNC
+    lda #0
+    sta COLUBK
+    
     lda laserShape
     sta GRP1
     
@@ -596,19 +602,24 @@ playfieldLoopNoSync
     sta WSYNC
      
 .endScreenNoWait
+    lda #255
+    sta COLUBK
+        
     lda #0
+    sta PF0
     sta GRP0
     sta GRP1
     sta ENABL
     sta ENAM1
     sta ENAM0
-    sta COLUBK
-    sta PF0
     sta PF1
     sta PF2
-        
+    sta WSYNC
+    lda #0
+    sta COLUBK
+     
     ; now the bottom padding area    
-    ldy #PADDING_HEIGHT
+    ldy #PADDING_HEIGHT-1
     
 .bottomPaddingLoop
     sta WSYNC
@@ -1562,7 +1573,7 @@ textPlayfieldLoopNoSync
     
 textEndScreen
     ; now the bottom padding area    
-    ldy #PADDING_HEIGHT
+    ldy #PADDING_HEIGHT + 1
     lda #0
     
 .bottomPaddingLoop
