@@ -987,6 +987,7 @@ doneBoxGravity
     lda boxMinorDX
     bpl .notAddBoxDX
     dex      ; high byte becomes $ff to reflect negative delta
+    
 .notAddBoxDX
     clc
     adc boxMinorX
@@ -1531,7 +1532,7 @@ textPlayfieldLoopNoSync
     nop
     nop
     nop
-    
+       
     lda startOfText5,x
     sta PF0  
               
@@ -2028,12 +2029,19 @@ jetVolume
     dc.b    0, 10, 10, 10, 10
     
 frictionTable
+    IF VIDEO_MODE=0 ; NTSC
     ; positive offsets
     dc.b    0, 0, -1, -1, -2, -4, -7, -10
     dc.b    10, 7, 4, 2, 1, 1, 0, 0
     ; negative offsets
+    ENDIF
     
-    
+    IF VIDEO_MODE=1 ; PAL
+    ; positive offsets
+    dc.b    0, 0, 0, 0, -1, -1, -2, -4
+    dc.b    4, 2, 1, 1, 0, 0, 0, 0
+    ; negative offsets
+    ENDIF
 ;;;;;;;;;;;;;;;;;;;;
 
     IFNCONST PRINTED_SPACE_LEFT
