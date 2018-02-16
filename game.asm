@@ -25,6 +25,7 @@ VSYNC_LINES         =   3
 VBLANK_LINES        =   37
 KERNAL_LINES        =   192
 OVERSCAN_LINES      =   30
+PLAY_AREA_HEIGHT    =   190
     ENDIF
     
     IF VIDEO_MODE=1
@@ -33,13 +34,15 @@ VSYNC_LINES         =   3
 VBLANK_LINES        =   37
 KERNAL_LINES        =   242
 OVERSCAN_LINES      =   30
+PLAY_AREA_HEIGHT    =   190
     ENDIF
     
     IF VIDEO_MODE=2
         ECHO "SECAM mode not supported"
     ENDIF
     ENDIF
-        
+
+PADDING_HEIGHT      =   (KERNAL_LINES - PLAY_AREA_HEIGHT) / 2        
 CLOCKS_PER_SCANLINE =   76
 
     ; storage location (1st byte in RAM)
@@ -99,6 +102,7 @@ sceneryAnimationOffset      = $b7
 sceneryAnimationPosition    = $b8
 sceneryAnimationFramesUntilUpdate = $b9
 sceneryLaserPosition        = $ba
+laserShape                  = $bb
 
 ; storage for playfield data. Allow 16 lines and 4 values for each = 64 bytes. Half our RAM!
 sceneryStart0               = $c0
@@ -152,7 +156,7 @@ clear
     lda #0
     sta level
       
-    lda #KERNAL_LINES-1
+    lda #PLAY_AREA_HEIGHT-1
     sta screenEndY
     
     lda #text0Start0-startOfText0
@@ -251,6 +255,8 @@ startOfFrame    ; Start of vertical blank processing
     lda #%10101010
     
 .drawLaser
+    sta laserShape
+    lda #0
     sta GRP1
     
     ; position the ship in its x position
@@ -359,9 +365,7 @@ startOfFrame    ; Start of vertical blank processing
     sta boxDrawEndLine
     
     jsr applyForce
-	      
-    ldy screenStartY ; scanline counter
-    
+	          
     ; prepare so that it counts over shipMajorY zero bytes before getting to the player graphic
     lda screenStartY
     sec
@@ -378,6 +382,20 @@ waitForVblankEnd
     sta HMOVE   
 	sta VBLANK 
     
+    ; first the top padding area    
+    lda #0
+    sta COLUBK
+    
+    ldy #PADDING_HEIGHT
+.topPaddingLoop
+    sta WSYNC
+    dey
+    bne .topPaddingLoop
+
+    lda laserShape
+    sta GRP1
+    
+    ldy screenStartY
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     jmp playfieldLoop
     
@@ -576,7 +594,27 @@ playfieldLoopNoSync
     ; now the bottom part of the screen
     ; wait for end of the current line before doing anything
     sta WSYNC
+     
 .endScreenNoWait
+    lda #0
+    sta GRP0
+    sta GRP1
+    sta ENABL
+    sta ENAM1
+    sta ENAM0
+    sta COLUBK
+    sta PF0
+    sta PF1
+    sta PF2
+        
+    ; now the bottom padding area    
+    ldy #PADDING_HEIGHT
+    
+.bottomPaddingLoop
+    sta WSYNC
+    dey
+    bne .bottomPaddingLoop
+    
     ; 30 scanlines of overscan for NTSC..
     lda #(OVERSCAN_LINES*CLOCKS_PER_SCANLINE)/64
 	sta  TIM64T
@@ -623,14 +661,14 @@ playfieldLoopNoSync
     lda #0
 
 .notTooLow
-    cmp #255-(KERNAL_LINES-1)
+    cmp #255-(PLAY_AREA_HEIGHT)
     bcc .notTooHigh
-    lda #255-(KERNAL_LINES-1)
+    lda #255-(PLAY_AREA_HEIGHT)
     
 .notTooHigh
     sta screenStartY
     clc
-    adc #KERNAL_LINES-1
+    adc #PLAY_AREA_HEIGHT-1
     sta screenEndY
      
     ; work out the top playfield bytes
@@ -1459,7 +1497,7 @@ textFrameStart    ; Start of vertical blank processing
     ; yes, finished
     rts
     
-textWaitForVblankEnd
+textWaitForVblankEnd subroutine
 	lda INTIM	
 	bne textWaitForVblankEnd	
 
@@ -1467,6 +1505,13 @@ textWaitForVblankEnd
     sta WSYNC
     sta HMOVE   
 	sta VBLANK 
+    
+    ; first the top padding area    
+    ldy #PADDING_HEIGHT
+.topPaddingLoop
+    sta WSYNC
+    dey
+    bne .topPaddingLoop
     
 textPlayfieldLoop    
     sta WSYNC   ; get to the start of the next scanline
@@ -1498,7 +1543,7 @@ textPlayfieldLoopNoSync
     
     ; now prepare for next scanline
     iny
-    cpy screenEndY
+    cpy #PLAY_AREA_HEIGHT-1
     beq textEndScreen
         
     ; time to change to next playfield data on next scanline?  
@@ -1513,6 +1558,16 @@ textPlayfieldLoopNoSync
     jmp textPlayfieldLoopNoSync   
     
 textEndScreen
+    ; now the bottom padding area    
+    ldy #PADDING_HEIGHT
+    lda #0
+    
+.bottomPaddingLoop
+    sta WSYNC
+    sta COLUBK
+    dey
+    bne .bottomPaddingLoop
+
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; now the bottom part of the screen
     ; wait for end of the current line before doing anything
