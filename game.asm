@@ -1573,6 +1573,9 @@ textEndScreen
     ; now the bottom padding area    
     ldy #PADDING_HEIGHT + 1
     lda #0
+    sta PF0
+    sta PF1
+    sta PF2
     
 .bottomPaddingLoop
     sta WSYNC
