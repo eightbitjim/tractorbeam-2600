@@ -214,6 +214,19 @@ startOfFrame    ; Start of vertical blank processing
     lda #0
     sta VSYNC           
     
+    ; work out the top playfield bytes
+    ldx #255
+    lda screenStartY
+    
+.findPlayfieldDataLoop
+    inx
+    cmp sceneryNextLine,x
+    bcs .findPlayfieldDataLoop
+
+    lda sceneryNextLine,x
+    sta nextScanlineChange
+    stx playfieldDataPosition
+
     ; work out jet position
     ldx jetPosition
     ldy randomSeed
@@ -355,8 +368,8 @@ startOfFrame    ; Start of vertical blank processing
     sta sceneryNextLine,x
     
     ; finished animation
-
-.doneAnimation
+    
+.doneAnimation    
     ; work out start and end lines to draw box
     lda boxMajorY
     sta boxDrawStartLine
@@ -371,7 +384,7 @@ startOfFrame    ; Start of vertical blank processing
     sec
     sbc shipMajorY ; ship draw counter
     tax
-          
+              
 waitForVblankEnd
 	lda INTIM	
 	bne waitForVblankEnd	
@@ -385,25 +398,30 @@ waitForVblankEnd
     ; first the top padding area    
     lda #0
     sta COLUBK
+    ldy #PADDING_HEIGHT
     
-    ldy #PADDING_HEIGHT-1
 .topPaddingLoop
     sta WSYNC
     dey
     bne .topPaddingLoop
 
+    ; draw 1 white line
     lda #255
     sta COLUBK
-    sta WSYNC
-    lda #0
-    sta COLUBK
     
+    ; pause a bit to allow the raster to move to the right and draw the line
+    ldy #8
+.pauseLoop
+    dey
+    bne .pauseLoop
+    
+    ldy screenStartY 
     lda laserShape
     sta GRP1
-    
-    ldy screenStartY
+        
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    jmp playfieldLoop
+    ; now need to update the playfield
+    jmp updatePlayfield; playfieldLoop
     
 goToEndScreen
     jmp .endScreen
@@ -466,11 +484,12 @@ playfieldLoopNoSync
     iny
     cpy screenEndY
     beq goToEndScreen
-        
+
     ; time to change to next playfield data on next scanline?  
     cpy nextScanlineChange
     bcc playfieldLoop ; no, just move to next scanline
 
+updatePlayfield
     ; yes change the playfield and do one extra scanline to catch up again
     lda (backgroundPointer0),y
 
@@ -681,28 +700,7 @@ playfieldLoopNoSync
     clc
     adc #PLAY_AREA_HEIGHT-1
     sta screenEndY
-     
-    ; work out the top playfield bytes
-    ldx #255
-    lda screenStartY
-    
-.findPlayfieldDataLoop
-    inx
-    cmp sceneryNextLine,x
-    bcs .findPlayfieldDataLoop
- 
-    lda sceneryStart0,x
-    sta PF0
-    lda sceneryStart1,x
-    sta PF1
-    lda sceneryStart2,x
-    sta PF2
-    lda sceneryNextLine,x
-    sta nextScanlineChange
-    
-    inx
-    stx playfieldDataPosition
-    
+         
     ; set up pointers so the background colours get drawn correctly
     ldx level
     lda #sceneryColourIndexLow,x
@@ -1519,7 +1517,7 @@ textWaitForVblankEnd subroutine
 	sta VBLANK 
     
     ; first the top padding area    
-    ldy #PADDING_HEIGHT
+    ldy #PADDING_HEIGHT-1
     
 .topPaddingLoop
     sta WSYNC
