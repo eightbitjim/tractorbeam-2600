@@ -49,8 +49,8 @@ STATUS_AREA_HEIGHT  =   10
 BOTTOM_PADDING_HEIGHT      =   KERNAL_LINES - PLAY_AREA_HEIGHT - STATUS_AREA_HEIGHT - TOP_PADDING_HEIGHT        
 CLOCKS_PER_SCANLINE =   76
 NUMBER_OF_LIVES     =   5
-STATUS_AREA_BACKGROUND_COLOUR  =   123
-STATUS_AREA_FOREGROUND_COLOUR   =   2
+STATUS_AREA_BACKGROUND_COLOUR  =   2
+STATUS_AREA_FOREGROUND_COLOUR   =   123
 PLAY_AREA_FOREGROUND_COLOR      =   0
 
     ; storage location (1st byte in RAM)
@@ -1708,6 +1708,26 @@ textEndScreen
     lda #(OVERSCAN_LINES*CLOCKS_PER_SCANLINE)/64-1
 	sta  TIM64T
 	
+	; make explosion sound if necessary
+    lda explosionCounter
+    bne .counterRunning
+    lda #0
+    sta AUDV0
+ 
+    jmp .doneCounter
+    
+.counterRunning
+    lda #15 ; volume up
+    sta AUDV0
+
+    lda #32
+    sec
+    sbc explosionCounter    
+    dec explosionCounter    
+  
+.doneCounter
+    sta AUDF0
+    
 .textWaitForOverscanToComplete
     lda INTIM	
 	bne .textWaitForOverscanToComplete	
