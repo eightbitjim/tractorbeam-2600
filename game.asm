@@ -25,7 +25,9 @@ VSYNC_LINES         =   3
 VBLANK_LINES        =   37
 KERNAL_LINES        =   192
 OVERSCAN_LINES      =   30
-PLAY_AREA_HEIGHT    =   184
+PLAY_AREA_HEIGHT    =   182
+STATUS_AREA_HEIGHT  =   8
+TOP_PADDING_HEIGHT     =   0
     ENDIF
     
     IF VIDEO_MODE=1
@@ -35,6 +37,8 @@ VBLANK_LINES        =   37
 KERNAL_LINES        =   242
 OVERSCAN_LINES      =   30
 PLAY_AREA_HEIGHT    =   190
+TOP_PADDING_HEIGHT     =   20
+STATUS_AREA_HEIGHT  =   10
     ENDIF
     
     IF VIDEO_MODE=2
@@ -42,8 +46,12 @@ PLAY_AREA_HEIGHT    =   190
     ENDIF
     ENDIF
 
-PADDING_HEIGHT      =   (KERNAL_LINES - PLAY_AREA_HEIGHT) / 2        
+BOTTOM_PADDING_HEIGHT      =   KERNAL_LINES - PLAY_AREA_HEIGHT - STATUS_AREA_HEIGHT - TOP_PADDING_HEIGHT        
 CLOCKS_PER_SCANLINE =   76
+NUMBER_OF_LIVES     =   5
+STATUS_AREA_BACKGROUND_COLOUR  =   2
+STATUS_AREA_FOREGROUND_COLOUR   =   123
+PLAY_AREA_FOREGROUND_COLOR      =   0
 
     ; storage location (1st byte in RAM)
 nextScanlineChange          = $80             
@@ -78,6 +86,7 @@ boxMajorDY                  = $9f
 shipMajorDX                 = $a0
 shipMajorDY                 = $a1
 forceX                      = $a2
+lastButtonPosition          = $a2 ; deliberately the same as the previous value
 forceY                      = $a3
 beamY0                      = $a4
 jetX                        = $a5
@@ -103,6 +112,8 @@ sceneryAnimationPosition    = $b8
 sceneryAnimationFramesUntilUpdate = $b9
 sceneryLaserPosition        = $ba
 laserShape                  = $bb
+lives                       = $bc
+livesDisplayByte            = $bd
 
 ; storage for playfield data. Allow 16 lines and 4 values for each = 64 bytes. Half our RAM!
 sceneryStart0               = $c0
@@ -152,7 +163,8 @@ clear
     pha
     dex
     bne clear
-    
+newGame
+
     lda #0
     sta level
       
@@ -163,6 +175,10 @@ clear
     sta textOffsetStart
     jsr displayTextScreen
       
+    ; set up constants at beginning of game
+    lda #NUMBER_OF_LIVES
+    sta lives
+    
 startLevel
     ; once only initialisation per level
     jsr copyPlayfieldData
@@ -194,6 +210,14 @@ startLevel
     ; make missles bigger
     lda #16
     sta NUSIZ0
+    jmp startOfFrame
+    
+dead
+    ; dead
+    lda #text1Start0-startOfText0
+    sta textOffsetStart
+    jsr displayTextScreen
+    jmp newGame
     
 startOfFrame    ; Start of vertical blank processing
     lda #0
@@ -213,6 +237,19 @@ startOfFrame    ; Start of vertical blank processing
 	sta  TIM64T
     lda #0
     sta VSYNC           
+    
+    ; check for collisions
+    jsr collisionCheck
+    
+    ; dead?
+    lda lives
+    cmp #255
+    beq dead
+    
+    ; work out the byte for the playfield to display the number of lives
+    ldy lives
+    lda livesDisplay,y
+    sta livesDisplayByte
     
     ; work out the top playfield bytes
     ldx #255
@@ -325,10 +362,7 @@ startOfFrame    ; Start of vertical blank processing
     ; add DX and DY to x and y
     jsr physics
     jsr physicsNoGravity
-    
-    ; check for collisions
-    jsr collisionCheck
-      
+          
     ; update background animation
     lda sceneryAnimationLength
     cmp #0
@@ -398,7 +432,8 @@ waitForVblankEnd
     ; first the top padding area    
     lda #0
     sta COLUBK
-    ldy #PADDING_HEIGHT
+    ldy #TOP_PADDING_HEIGHT
+    beq .doneTopPadding
     
 .topPaddingLoop
     sta WSYNC
@@ -408,7 +443,8 @@ waitForVblankEnd
     ; draw 1 white line
     lda #255
     sta COLUBK
-    
+
+.doneTopPadding
     ; pause a bit to allow the raster to move to the right and draw the line
     ldy #8
 .pauseLoop
@@ -621,7 +657,7 @@ updatePlayfield
     sta WSYNC
      
 .endScreenNoWait
-    lda #255
+    lda #255    ; white
     sta COLUBK
         
     lda #0
@@ -634,11 +670,60 @@ updatePlayfield
     sta PF1
     sta PF2
     sta WSYNC
+    
+    lda #STATUS_AREA_BACKGROUND_COLOUR
+    sta COLUBK
+    
+    lda #STATUS_AREA_FOREGROUND_COLOUR
+    sta COLUPF
+    
+    ; one blank line at top of status area at the start of the loop
+    ; now the status area. height minus 1 because of the blank line at the bottom
+    ldy #STATUS_AREA_HEIGHT - 1
+
+.statusAreaLoop
+    sta WSYNC
+    
+    ; only display lives on the right had side of the screen
+    lda #0
+    sta PF1
+    
+    ; skip over the middle of the screen
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    
+    ; draw the number of lives
+    lda livesDisplayByte
+    sta PF1
+       
+    dey
+    bne .statusAreaLoop
+
+    ; blank line below
+    lda #0
+    sta PF1
+    sta WSYNC
+    
     lda #0
     sta COLUBK
-     
+    sta PF1
+    
+    lda #PLAY_AREA_FOREGROUND_COLOR
+    sta COLUPF
+        
     ; now the bottom padding area    
-    ldy #PADDING_HEIGHT-1
+    ldy #BOTTOM_PADDING_HEIGHT-1
     
 .bottomPaddingLoop
     sta WSYNC
@@ -1033,6 +1118,7 @@ doneBoxGravity
     lda boxMinorDY
     bpl .notAddBoxDY
     dex      ; high byte becomes $ff to reflect negative delta
+    
 .notAddBoxDY
     clc
     adc boxMinorY
@@ -1057,6 +1143,7 @@ doneBoxGravity
     lda #0
     sta boxMajorDX
     sta boxMinorDX
+    
 .allPhysicsDone
     rts
             
@@ -1065,6 +1152,7 @@ collisionCheck subroutine
     and #128
     beq .doneCheck1
     jsr resetPlayer
+    jmp .donePlayerChecks
 
 .doneCheck1
     lda CXPPMM  ; check player 0 hitting player 1 (laser)
@@ -1073,6 +1161,13 @@ collisionCheck subroutine
     jsr resetPlayer
 
 .doneCheck2    
+    lda CXP0FB  ; check ball hitting player
+    and #64
+    beq .donePlayerChecks  
+    jsr resetBox
+    jsr resetPlayer
+    
+.donePlayerChecks
     lda CXBLPF  ; check ball hitting playfield (bit 7)
     and #128
     beq .doneCheck3
@@ -1085,13 +1180,6 @@ collisionCheck subroutine
     jsr resetBox    
 
 .doneCheck4
-    lda CXP0FB  ; check ball hitting player
-    and #64
-    beq .doneCheck5  
-    jsr resetBox
-    jsr resetPlayer
-    
-.doneCheck5
     ; reset collision registers
     sta CXCLR
     rts
@@ -1129,6 +1217,8 @@ resetPlayer subroutine
     
     lda #32
     sta explosionCounter
+    
+    dec lives
     rts
     
 ;-----------------------------
@@ -1502,11 +1592,25 @@ textFrameStart    ; Start of vertical blank processing
 .notIncreaseColour
     ; check for user hitting fire
     lda INPT4
-	bmi textWaitForVblankEnd
+    bmi .checkDone ; not pressed
     
-    ; yes, finished
+    ; was pressed. Was it pressed last time?
+    lda lastButtonPosition
+    bpl .pressedLastTime
+
+    ; finished. Not pressed last time. But remember it's pressed now
+    lda #0
+    sta lastButtonPosition
     rts
+
+.pressedLastTime
+    jmp .buttonCheckDone
     
+.checkDone 
+    sta lastButtonPosition
+
+.buttonCheckDone   
+        
 textWaitForVblankEnd subroutine
 	lda INTIM	
 	bne textWaitForVblankEnd	
@@ -1517,12 +1621,14 @@ textWaitForVblankEnd subroutine
 	sta VBLANK 
     
     ; first the top padding area    
-    ldy #PADDING_HEIGHT-1
+    ldy #TOP_PADDING_HEIGHT
+    beq .topPaddingDone
     
 .topPaddingLoop
     sta WSYNC
     dey
     bne .topPaddingLoop
+.topPaddingDone
     
 textPlayfieldLoop    
     sta WSYNC   ; get to the start of the next scanline
@@ -1571,7 +1677,7 @@ textPlayfieldLoopNoSync
     
 textEndScreen
     ; now the bottom padding area    
-    ldy #PADDING_HEIGHT + 1
+    ldy #BOTTOM_PADDING_HEIGHT + 1 + STATUS_AREA_HEIGHT
     lda #0
     sta PF0
     sta PF1
@@ -1599,9 +1705,29 @@ textEndScreen
     sta ENAM1
     
     ; 30 scanlines of overscan for NTSC...
-    lda #(OVERSCAN_LINES*CLOCKS_PER_SCANLINE)/64	
+    lda #(OVERSCAN_LINES*CLOCKS_PER_SCANLINE)/64-1
 	sta  TIM64T
 	
+	; make explosion sound if necessary
+    lda explosionCounter
+    bne .counterRunning
+    lda #0
+    sta AUDV0
+ 
+    jmp .doneCounter
+    
+.counterRunning
+    lda #15 ; volume up
+    sta AUDV0
+
+    lda #32
+    sec
+    sbc explosionCounter    
+    dec explosionCounter    
+  
+.doneCounter
+    sta AUDF0
+    
 .textWaitForOverscanToComplete
     lda INTIM	
 	bne .textWaitForOverscanToComplete	
@@ -2019,6 +2145,14 @@ sceneryColoursLevel1
     
     ENDIF
     
+livesDisplay
+    ; byte for playfield to display number of lives
+    dc.b    %00000000
+    dc.b    %10000000
+    dc.b    %10100000
+    dc.b    %10101000
+    dc.b    %10101010
+    
     org $fe00
 shipStart
     ; display ship and then 248 blanks
@@ -2033,7 +2167,7 @@ shipStart
     REPEAT  248
         dc.b   0
     REPEND
-    
+        
     org $ff00
     ; sound effect values
 jetFrequency
