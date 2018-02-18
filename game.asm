@@ -167,7 +167,7 @@ newGame
 
     lda #0
     sta level
-      
+        
     lda #PLAY_AREA_HEIGHT-1
     sta screenEndY
     
@@ -866,6 +866,7 @@ control subroutine
     ror ; sets carry with LSB. If set, can show horizontal jets, if clear can show vertical
     bcc .notRightJet
     ldy #4  ; jet right
+
 .notRightJet
     ldx shipMinorDX
     cpx #$81
@@ -883,6 +884,7 @@ control subroutine
     dex
     stx shipMinorDX
     jmp .notRight
+
 .notLeft
     cmp #64 ; right
     bne .notRight
@@ -890,6 +892,7 @@ control subroutine
     ror ; sets carry with LSB. If set, can show horizontal jets, if clear can show vertical
     bcc .notLeftJet
     ldy #3 ; jet left
+
 .notLeftJet
     ldx shipMinorDX
     cpx #$7f
@@ -904,6 +907,7 @@ control subroutine
     beq .notRight
     inx
     stx shipMinorDX
+
 .notRight
     ; vertical movement
     lda SWCHA ; joystick input
@@ -914,6 +918,7 @@ control subroutine
     ror ; sets carry with LSB. If set, can show horizontal jets, if clear can show vertical
     bcs .notDownJet
     ldy #2 ; jet down
+
 .notDownJet
     ldx shipMinorDY
     cpx #$81
@@ -929,6 +934,7 @@ control subroutine
     dex
     stx shipMinorDY
     jmp .notDown
+
 .notUp
     cmp #16 ; down
     bne .notDown
@@ -936,6 +942,7 @@ control subroutine
     ror ; sets carry with LSB. If set, can show horizontal jets, if clear can show vertical
     bcs .notUpJet
     ldy #1 ; jet up
+
 .notUpJet
     ldx shipMinorDY
     cpx #$7f
@@ -950,8 +957,8 @@ control subroutine
     beq .notDown
     inx
     stx shipMinorDY
-.notDown
-    
+
+.notDown    
 .doneShipX
     sty jetPosition
     rts
@@ -1027,6 +1034,7 @@ doneBoxGravity
     lda shipMinorDX
     bpl .notAddDX ; positive or negative value?
     dex      ; high byte becomes $ff to reflect negative delta
+
 .notAddDX
     clc
     adc shipMinorX
