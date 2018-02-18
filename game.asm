@@ -765,6 +765,15 @@ updatePlayfield
 
     ; won
     inc level
+    lda level
+    cmp #numberOfLevels
+    bne .changeLevel
+
+    ; go back to the start. TODO: make it more difficult; perhaps add cross wind?
+    lda #0
+    sta level
+.changeLevel
+    inc lives ; resetting the player on the next level removes a life, so add one
     jmp startLevel
         
 .notWon
@@ -788,6 +797,9 @@ updatePlayfield
          
     ; set up pointers so the background colours get drawn correctly
     ldx level
+    lda levelOrder,x
+    tax
+    
     lda #sceneryColourIndexLow,x
     sec
     sbc screenStartY
@@ -1441,6 +1453,11 @@ squareRoot
 copyPlayfieldData subroutine
     ; copy data for this level from ROM to the 64 bytes of RAM set aside
     ldx level
+    
+    ; get the right level number
+    lda levelOrder,x
+    tax
+    
     ldy #0
     
 .dataLoop
@@ -1835,6 +1852,47 @@ scenery1NextLine
 scenery1Stats ; needs to follow on after NextLine array
     dc.b 10, 3, 1, 1, 2, 70, 1, 0 
 
+    ; scenery stats: beam slack length, elasticity, box mass, senery animation line1, line2, length, offset, laser x position
+
+scenery4Start0
+    dc.b %11110000, %10000000, %11000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
+scenery4Start1
+    dc.b %11111111, %10000000, %11000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
+scenery4Start2
+    dc.b %11111111, %00000000, %00000000, %00000000, %11000000, %11100000, %11110000, %11111000, %11111100
+scenery4NextLine
+    dc.b 8, 16, 24, 120, 128, 136, 152, 200, 255
+scenery4Stats ; needs to follow on after NextLine array
+    dc.b 10, 3, 1, 1, 2, 70, 1, 0 
+    
+scenery5Start0
+    dc.b %11110000, %00000000, %00000000, %00000000, %00000000
+scenery5Start1
+    dc.b %11111111, %00000000, %00000000, %01111000, %00000000
+scenery5Start2
+    dc.b %11111111, %00000000, %11000000, %00000000, %11000000
+scenery5NextLine
+    dc.b 8, 72, 128, 160, 255
+scenery5Stats ; needs to follow on after NextLine array
+    dc.b 20, 3, 1, 255, 255, 70, 1, 0
+
+scenery6Start0
+    dc.b %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000
+scenery6Start1
+    dc.b %00000000, %00011000, %00011000, %00011111, %00000011, %00000011, %00000000, %00000000
+scenery6Start2
+    dc.b %11000000, %11000000, %00000000, %00000000, %00000000, %00000111, %00000110, %11111110
+scenery6NextLine
+    dc.b 72, 80, 176, 184, 200, 208, 248, 255
+scenery6Stats ; needs to follow on after NextLine array
+    dc.b 10, 2, 1, 1, 255, 40, 1, 0  
+    
+    ; second set of stats for level 6(a)
+scenery6aNextLine
+    dc.b 72, 80, 176, 184, 200, 208, 248, 255
+scenery6aStats ; needs to follow on after NextLine array
+    dc.b 15, 3, 1, 1, 255, 40, 2, 84
+    
     org $fb00
     ;; table of 32 squares. To get a square of a number x < 32, use lda squares,x
 squares
@@ -1872,45 +1930,36 @@ scenery0NextLine
     dc.b 8, 16, 24, 128, 136, 144, 168, 240, 248, 255
 scenery0Stats ; needs to follow on after NextLine array
     dc.b 10, 3, 1, 1, 2, 100, 1, 84
-    
-; data for level 2
-
-scenery2Start0
-    dc.b %11110000, %00110000, %00010000, %00010000, %00110000, %01110000, %11110000, %11110000
-scenery2Start1
-    dc.b %11111111, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %10000000
-scenery2Start2
-    dc.b %11111111, %00000000, %00000000, %11111110, %11111100, %11111000, %11110000, %11100000
-scenery2NextLine
-    dc.b 8, 24, 80, 104, 128, 160, 208, 255
-    dc.b 15, 3, 0, 0, 0, 0, 0, 84
-    
-numberOfLevels  equ 4
-
+        
 sceneryDataIndexLow0
-    dc.b    <scenery0Start0, <scenery1Start0, <scenery2Start0, <scenery3Start0
+    dc.b    <scenery6Start0, <scenery6Start0, <scenery5Start0, <scenery4Start0, <scenery0Start0, <scenery1Start0, <scenery2Start0, <scenery3Start0
 sceneryDataIndexLow1
-    dc.b    <scenery0Start1, <scenery1Start1, <scenery2Start1, <scenery3Start1
+    dc.b     <scenery6Start1, <scenery6Start1, <scenery5Start1, <scenery4Start1, <scenery0Start1, <scenery1Start1, <scenery2Start1, <scenery3Start1
 sceneryDataIndexLow2
-    dc.b    <scenery0Start2, <scenery1Start2, <scenery2Start2, <scenery3Start2
+    dc.b     <scenery6Start2, <scenery6Start2, <scenery5Start2, <scenery4Start2, <scenery0Start2, <scenery1Start2, <scenery2Start2, <scenery3Start2
 sceneryDataIndexLowNextLine
-    dc.b    <scenery0NextLine, <scenery1NextLine, <scenery2NextLine, <scenery3NextLine
+    dc.b    <scenery6aNextLine, <scenery6NextLine, <scenery5NextLine,  <scenery4NextLine, <scenery0NextLine, <scenery1NextLine, <scenery2NextLine, <scenery3NextLine
 
 sceneryDataIndexHigh0
-    dc.b    >scenery0Start0, >scenery1Start0, >scenery2Start0, >scenery3Start0
+    dc.b    >scenery6Start0, >scenery6Start0, >scenery5Start0, >scenery4Start0, >scenery0Start0, >scenery1Start0, >scenery2Start0, >scenery3Start0
 sceneryDataIndexHigh1
-    dc.b    >scenery0Start0, >scenery1Start1, >scenery2Start1, >scenery3Start1
+    dc.b    >scenery6Start1, >scenery6Start1, >scenery5Start1, >scenery4Start1, >scenery0Start1, >scenery1Start1, >scenery2Start1, >scenery3Start1
 sceneryDataIndexHigh2
-    dc.b    >scenery0Start0, >scenery1Start2, >scenery2Start2, >scenery3Start2
+    dc.b    >scenery6Start2, >scenery6Start2, >scenery5Start2, >scenery4Start2, >scenery0Start2, >scenery1Start2, >scenery2Start2, >scenery3Start2
 sceneryDataIndexHighNextLine
-    dc.b    >scenery0NextLine, >scenery1NextLine, >scenery2NextLine, >scenery3NextLine
+    dc.b    >scenery6aNextLine, >scenery6NextLine, >scenery5NextLine, >scenery4NextLine, >scenery0NextLine, >scenery1NextLine, >scenery2NextLine, >scenery3NextLine
     
 sceneryColourIndexLow
-    dc.b    <sceneryColoursLevel0, <sceneryColoursLevel1, <sceneryColoursLevel0, <sceneryColoursLevel1
+    dc.b    <sceneryColoursLevel0, <sceneryColoursLevel0, <sceneryColoursLevel1, <sceneryColoursLevel0, <sceneryColoursLevel0, <sceneryColoursLevel1, <sceneryColoursLevel0, <sceneryColoursLevel1
     
 sceneryColourIndexHigh
-    dc.b    >sceneryColoursLevel0, >sceneryColoursLevel1, >sceneryColoursLevel0, >sceneryColoursLevel1
+    dc.b    >sceneryColoursLevel0, >sceneryColoursLevel0, >sceneryColoursLevel1, >sceneryColoursLevel0, >sceneryColoursLevel0, >sceneryColoursLevel1, >sceneryColoursLevel0, >sceneryColoursLevel1
     
+    ; specify the order of the levels
+numberOfLevels  equ 7
+levelOrder
+    dc.b   3, 5, 4, 6, 1, 0, 2
+
     org $fc00
 sceneryColoursLevel0
     IF VIDEO_MODE=NTSC
@@ -2192,6 +2241,18 @@ frictionTable
     ENDIF
 ;;;;;;;;;;;;;;;;;;;;
 
+; data for level 2
+
+scenery2Start0
+    dc.b %11110000, %00110000, %00010000, %00010000, %00110000, %01110000, %11110000, %11110000
+scenery2Start1
+    dc.b %11111111, %00000000, %00000000, %00000000, %00000000, %00000000, %00000000, %10000000
+scenery2Start2
+    dc.b %11111111, %00000000, %00000000, %11111110, %11111100, %11111000, %11110000, %11100000
+scenery2NextLine
+    dc.b 8, 24, 80, 104, 128, 160, 208, 255
+    dc.b 15, 3, 0, 0, 0, 0, 0, 84
+    
     IFNCONST PRINTED_SPACE_LEFT
 
 PRINTED_SPACE_LEFT  equ 1
