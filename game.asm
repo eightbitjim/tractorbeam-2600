@@ -49,6 +49,9 @@ STATUS_AREA_HEIGHT  =   10
 BOTTOM_PADDING_HEIGHT      =   KERNAL_LINES - PLAY_AREA_HEIGHT - STATUS_AREA_HEIGHT - TOP_PADDING_HEIGHT        
 CLOCKS_PER_SCANLINE =   76
 NUMBER_OF_LIVES     =   5
+STATUS_AREA_BACKGROUND_COLOUR  =   123
+STATUS_AREA_FOREGROUND_COLOUR   =   2
+PLAY_AREA_FOREGROUND_COLOR      =   0
 
     ; storage location (1st byte in RAM)
 nextScanlineChange          = $80             
@@ -654,7 +657,7 @@ updatePlayfield
     sta WSYNC
      
 .endScreenNoWait
-    lda #255
+    lda #255    ; white
     sta COLUBK
         
     lda #0
@@ -668,23 +671,57 @@ updatePlayfield
     sta PF2
     sta WSYNC
     
-    lda #123
+    lda #STATUS_AREA_BACKGROUND_COLOUR
     sta COLUBK
-
-    ; now the status area
-    ldy #STATUS_AREA_HEIGHT
-    lda livesDisplayByte
-    sta PF1
+    
+    lda #STATUS_AREA_FOREGROUND_COLOUR
+    sta COLUPF
+    
+    ; one blank line at top of status area at the start of the loop
+    ; now the status area. height minus 1 because of the blank line at the bottom
+    ldy #STATUS_AREA_HEIGHT - 1
 
 .statusAreaLoop
-    sta WSYNC 
+    sta WSYNC
+    
+    ; only display lives on the right had side of the screen
+    lda #0
+    sta PF1
+    
+    ; skip over the middle of the screen
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    
+    ; draw the number of lives
+    lda livesDisplayByte
+    sta PF1
+       
     dey
     bne .statusAreaLoop
 
+    ; blank line below
+    lda #0
+    sta PF1
+    sta WSYNC
+    
     lda #0
     sta COLUBK
     sta PF1
     
+    lda #PLAY_AREA_FOREGROUND_COLOR
+    sta COLUPF
+        
     ; now the bottom padding area    
     ldy #BOTTOM_PADDING_HEIGHT-1
     
